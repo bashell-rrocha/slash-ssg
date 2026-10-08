@@ -1,3 +1,5 @@
+import type { SafeHtml } from "@_bashell/slash/ssr";
+
 export type Params = Record<string, string>;
 
 export interface Head {
@@ -8,14 +10,14 @@ export interface Head {
   canonical?: string; // default: site.baseUrl + url
   noindex?: boolean; // default: false; true também remove do sitemap
   jsonLd?: object | object[];
-  extra?: string; // HTML adicional no <head> (escape é do autor)
+  extra?: SafeHtml; // HTML adicional no <head>; precisa de unsafeHtml(...) (texto comum é escapado)
 }
 
 export interface Route<P extends Params = Params> {
   path: string; // "/", "/sobre", "/projetos/:slug", "/404"
   paths?: () => P[] | Promise<P[]>; // obrigatório se path tem ":param"
   head: Head | ((params: P) => Head | Promise<Head>);
-  page: (params: P) => string | Promise<string>; // retorna HTML (htmlString)
+  page: (params: P) => SafeHtml | Promise<SafeHtml>; // retorna HTML seguro (view`...`)
 }
 
 export interface ImagesConfig {

@@ -1,3 +1,4 @@
+import { isSafeHtml } from "@_bashell/slash/ssr";
 import { escapeHtml as e } from "./escape";
 import type { OgImage } from "./image-core";
 import { absoluteUrl } from "./routes-core";
@@ -52,7 +53,7 @@ export function renderHead(input: {
     }
   }
 
-  if (head.extra) out.push(head.extra);
+  if (head.extra) out.push(isSafeHtml(head.extra) ? head.extra.value : e(String(head.extra)));
   for (const href of cssHrefs) out.push(`<link rel="stylesheet" href="${e(href)}">`);
   if (devReload) {
     out.push('<script>new EventSource("/__reload").onmessage=()=>location.reload()</script>');

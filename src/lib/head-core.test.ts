@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { unsafeHtml } from "@_bashell/slash/ssr";
 import { renderHead, resolveTitle } from "./head-core";
 import type { SiteConfig } from "./types";
 
@@ -107,14 +108,25 @@ describe("head-core", () => {
     expect(out).toContain("\\u003c/script>");
   });
 
-  test("extra entra cru e CSS vira link stylesheet", () => {
+  test("extra SafeHtml entra cru e CSS vira link stylesheet", () => {
     const out = renderHead({
       ...base,
-      head: { title: "A", extra: '<meta name="x" content="y">' },
+      head: { title: "A", extra: unsafeHtml('<meta name="x" content="y">') },
       cssHrefs: ["/a.css"],
     });
     expect(out).toContain('<meta name="x" content="y">');
     expect(out).toContain('<link rel="stylesheet" href="/a.css">');
+  });
+
+  test("extra como texto comum é escapado", () => {
+    const out = renderHead({
+      ...base,
+      // biome-ignore lint/suspicious/noExplicitAny: simula um autor passando string em vez de SafeHtml
+      head: { title: "A", extra: '<script>alert(1)</script>' as any },
+      cssHrefs: [],
+    });
+    expect(out).not.toContain("<script>alert(1)");
+    expect(out).toContain("&lt;script&gt;alert(1)");
   });
 
   test("escapa caracteres especiais e preserva acentos", () => {

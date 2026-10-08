@@ -30,7 +30,7 @@ servidor do `dev` espera até 500 ms por ele antes de responder 404. Restos de b
 public/           copiado como está para dist/ (index.html é a casca do documento)
 src/routes.ts     lista de rotas
 src/site.ts       configuração do site
-src/pages/        funções que retornam o HTML de cada página
+src/pages/        funções que retornam `SafeHtml` (``view`...` ``) de cada página
 src/islands/      componentes interativos
 src/assets/images imagens processadas pelo pipeline
 src/lib/          núcleo do template (head, imagens, ilhas, prerender)
@@ -68,7 +68,7 @@ Cada rota gera `dist/<path>/index.html`; `/404` gera `dist/404.html`.
 
 Campos de `head`: `title` (recebe o sufixo ` | site.name`), `description`, `image` (og:image: arquivo em
 `src/assets/images/`, caminho de `public/` ou URL absoluta), `imageAlt`, `canonical`, `noindex`, `jsonLd`
-(objeto ou array) e `extra` (HTML cru no `<head>`). Páginas `noindex` ficam fora do sitemap e sem `canonical`/`og:url`.
+(objeto ou array) e `extra` (HTML no `<head>`; precisa ser `unsafeHtml("...")`, texto comum é escapado). Páginas `noindex` ficam fora do sitemap e sem `canonical`/`og:url`.
 `site.defaultHead` define `description` e `image` padrão.
 
 Open Graph de imagem: quando `image` (da página ou de `site.defaultHead`) é uma imagem local raster de
@@ -77,9 +77,27 @@ Open Graph de imagem: quando `image` (da página ou de `site.defaultHead`) é um
 `og:image:alt` e `twitter:image:alt`. Imagens de `public/`, URLs absolutas, SVG e GIF só ganham `og:image`
 (sem largura, altura e tipo, que o build não conhece).
 
+## HTML seguro
+
+Páginas, layouts e ilhas retornam ``view`...` ``, que produz `SafeHtml`. Tudo o que você interpola (textos, props,
+valores de dados) é sempre escapado, então é seguro passar qualquer valor. `SafeHtml` aninhado (outro ``view`...` ``,
+`island()`, `Picture()`) entra como está.
+
+```ts
+export function sobre() {
+  return layout(view`<h1>${titulo}</h1>`);
+}
+```
+
+- Retornar uma string comum de uma página falha o build com "page deve retornar HTML seguro".
+- `unsafeHtml("...")` serve só para HTML confiável (por exemplo, HTML que você mesmo gerou e sanitizou). Nunca passe
+  entrada de usuário. `head.extra` também exige `unsafeHtml(...)`; texto comum é escapado.
+- `unsafeUrl("...")` é para URLs excepcionais que a política do core bloqueia (esquemas fora de http, https, mailto e tel).
+- Um `<` literal dentro de um `<script>` estático no template exige `unsafeHtml` (limitação do htm).
+
 ## Ilhas
 
-Páginas são HTML puro; só o que usa `island()` carrega JavaScript:
+As páginas geram HTML estático (sem JavaScript); só o que usa `island()` carrega JavaScript:
 
 ```ts
 ${island("counter", Counter, { start: 3 })}
@@ -129,11 +147,7 @@ export const site: SiteConfig = {
 ## Criar um projeto derivado
 
 1. Copie a pasta sem `.git/`, `docs/`, `node_modules/`, `dist/` e `.slash-cache/`.
-2. No `package.json`, troque `@_bashell/slash` de `workspace:*` para a versão do npm.
+2. No `package.json`, troque `@_bashell/slash` de `workspace:*` para a versão do npm (`^0.0.1`).
 3. Remova o alias `paths` (para `../slash/src`) do `tsconfig.json`.
 4. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun install && bun run dev`.
-
-## Limitação conhecida
-
-O `@_bashell/slash@0.3.0` publicado no npm não inclui declarações de tipo; com o pacote do npm o `typecheck`
-falha até a correção no core ser publicada.
+5. Para os testes E2E, instale o navegador do Playwright uma vez: `bunx playwright install chromium`.
