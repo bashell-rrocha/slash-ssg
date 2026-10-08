@@ -68,7 +68,7 @@ Cada rota gera `dist/<path>/index.html`; `/404` gera `dist/404.html`.
 
 Campos de `head`: `title` (recebe o sufixo ` | site.name`), `description`, `image` (og:image: arquivo em
 `src/assets/images/`, caminho de `public/` ou URL absoluta), `imageAlt`, `canonical`, `noindex`, `jsonLd`
-(objeto ou array) e `extra` (HTML cru no `<head>`). Páginas `noindex` ficam fora do sitemap e sem `canonical`/`og:url`.
+(objeto ou array) e `extra` (HTML no `<head>`; precisa ser `unsafeHtml("...")`, texto comum é escapado). Páginas `noindex` ficam fora do sitemap e sem `canonical`/`og:url`.
 `site.defaultHead` define `description` e `image` padrão.
 
 Open Graph de imagem: quando `image` (da página ou de `site.defaultHead`) é uma imagem local raster de
