@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Generated TypeScript types
+**/*.module.css.d.ts
+
+# TypeScript
+*.tsbuildinfo
+.tsc-cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Slash cache
+.slash-cache/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Staging do build (troca atômica de dist/)
+dist.tmp-*/
+dist.old-*/
