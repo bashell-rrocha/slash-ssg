@@ -28,7 +28,7 @@ export interface BuildSummary {
 
 type Output = { path: string; kind: string };
 
-async function bundle(root: string, entry: string, outdir: string, target: "browser" | "node", dev: boolean) {
+async function bundle(root: string, entry: string, outdir: string, target: "browser" | "bun", dev: boolean) {
   const result = await Bun.build({
     entrypoints: [join(root, entry)],
     outdir,
@@ -39,7 +39,7 @@ async function bundle(root: string, entry: string, outdir: string, target: "brow
     define: {
       __DEV__: String(dev),
       // true só no bundle de prerender: o client elimina o renderer de string (htmlString)
-      __SERVER__: String(target === "node"),
+      __SERVER__: String(target === "bun"),
       "process.env.NODE_ENV": JSON.stringify(dev ? "development" : "production"),
     },
     plugins: [cssModuleTypesPlugin({ verbose: false })],
@@ -151,9 +151,9 @@ async function buildInto(dist: string, opts: { root: string; dev: boolean }): Pr
   const clientJs = clientEntry.path.slice(dist.length + 1);
   const jsBytes = clientJsOutputs.reduce((sum, o) => sum + statSync(o.path).size, 0);
 
-  // 3. Bundle do servidor: gera o JS de prerender e o CSS do site. target "node" (e não "bun") porque o
-  // @_bashell/slash publicado no npm tem a condição de export "bun" apontando para src/, que não é distribuído.
-  const serverOutputs = await bundle(root, "src/lib/prerender.ts", prerenderDir, "node", dev);
+  // 3. Bundle do servidor: gera o JS de prerender e o CSS do site (target "bun", que resolve o src/ do
+  // @_bashell/slash, publicado no pacote desde a 0.0.1)
+  const serverOutputs = await bundle(root, "src/lib/prerender.ts", prerenderDir, "bun", dev);
   const serverJs = serverOutputs.find((o) => o.kind === "entry-point");
   const serverCss = serverOutputs.find((o) => o.path.endsWith(".css"));
   if (!serverJs) throw new SsgError("O bundle de prerender não gerou o JS de entrada");
