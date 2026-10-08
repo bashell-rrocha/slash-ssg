@@ -1,0 +1,7 @@
+# Configuração do Bun para desenvolvimento
+# Força o uso do código fonte TypeScript do pacote slash ao invés do dist minificado
+
+[module]
+[module.resolution]
+# Em desenvolvimento, usa o código fonte TS ao invés do dist
+alias = { "slash" = "/home/dev/Projetos/slash-meta/packages/slash/src/index.ts" }
