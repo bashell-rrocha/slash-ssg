@@ -30,7 +30,7 @@ servidor do `dev` espera até 500 ms por ele antes de responder 404. Restos de b
 public/           copiado como está para dist/ (index.html é a casca do documento)
 src/routes.ts     lista de rotas
 src/site.ts       configuração do site
-src/pages/        funções que retornam o HTML de cada página
+src/pages/        funções que retornam `SafeHtml` (``view`...` ``) de cada página
 src/islands/      componentes interativos
 src/assets/images imagens processadas pelo pipeline
 src/lib/          núcleo do template (head, imagens, ilhas, prerender)
@@ -77,9 +77,27 @@ Open Graph de imagem: quando `image` (da página ou de `site.defaultHead`) é um
 `og:image:alt` e `twitter:image:alt`. Imagens de `public/`, URLs absolutas, SVG e GIF só ganham `og:image`
 (sem largura, altura e tipo, que o build não conhece).
 
+## HTML seguro
+
+Páginas, layouts e ilhas retornam ``view`...` ``, que produz `SafeHtml`. Tudo o que você interpola (textos, props,
+valores de dados) é sempre escapado, então é seguro passar qualquer valor. `SafeHtml` aninhado (outro ``view`...` ``,
+`island()`, `Picture()`) entra como está.
+
+```ts
+export function sobre() {
+  return layout(view`<h1>${titulo}</h1>`);
+}
+```
+
+- Retornar uma string comum de uma página falha o build com "page deve retornar HTML seguro".
+- `unsafeHtml("...")` serve só para HTML confiável (por exemplo, HTML que você mesmo gerou e sanitizou). Nunca passe
+  entrada de usuário. `head.extra` também exige `unsafeHtml(...)`; texto comum é escapado.
+- `unsafeUrl("...")` é para URLs excepcionais que a política do core bloqueia (esquemas fora de http, https, mailto e tel).
+- Um `<` literal dentro de um `<script>` estático no template exige `unsafeHtml` (limitação do htm).
+
 ## Ilhas
 
-Páginas são HTML puro; só o que usa `island()` carrega JavaScript:
+As páginas geram HTML estático (sem JavaScript); só o que usa `island()` carrega JavaScript:
 
 ```ts
 ${island("counter", Counter, { start: 3 })}

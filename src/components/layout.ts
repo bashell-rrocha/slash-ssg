@@ -3,6 +3,7 @@ import { view } from "../lib/renderer";
 import { site } from "../site";
 import styles from "../styles.module.css";
 
+// Devolve view`...` (SafeHtml): `content` já é SafeHtml e entra como está; textos interpolados (ex.: site.name) são escapados
 // Casca comum das páginas: navegação, conteúdo e rodapé
 export function layout(content: unknown): SafeHtml {
   return view`<div class=${styles.page}>
