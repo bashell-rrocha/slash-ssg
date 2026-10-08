@@ -129,11 +129,7 @@ export const site: SiteConfig = {
 ## Criar um projeto derivado
 
 1. Copie a pasta sem `.git/`, `docs/`, `node_modules/`, `dist/` e `.slash-cache/`.
-2. No `package.json`, troque `@_bashell/slash` de `workspace:*` para a versão do npm.
+2. No `package.json`, troque `@_bashell/slash` de `workspace:*` para a versão do npm (`^0.0.1`).
 3. Remova o alias `paths` (para `../slash/src`) do `tsconfig.json`.
 4. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun install && bun run dev`.
-
-## Limitação conhecida
-
-O `@_bashell/slash@0.3.0` publicado no npm não inclui declarações de tipo; com o pacote do npm o `typecheck`
-falha até a correção no core ser publicada.
+5. Para os testes E2E, instale o navegador do Playwright uma vez: `bunx playwright install chromium`.
