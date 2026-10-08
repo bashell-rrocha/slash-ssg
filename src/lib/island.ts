@@ -3,6 +3,7 @@ import { escapeHtml } from "./escape";
 import { islandWrapper, serializeProps } from "./island-core";
 
 // Mesmas regras dos filhos de um template: SafeHtml entra como está, arrays são juntados, vazio some e o resto é texto escapado
+// `true` vira texto ("true"), como no childToString do core
 function innerToHtml(value: unknown): string {
   if (isSafeHtml(value)) return value.value;
   if (Array.isArray(value)) return value.map(innerToHtml).join("");
