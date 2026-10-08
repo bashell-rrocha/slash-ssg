@@ -10,7 +10,7 @@ export const posts: Post[] = [
     slug: "primeiro-post",
     title: "Primeiro post",
     summary: "Como começar com o slash-ssg.",
-    body: "Cada arquivo de página retorna HTML em string, e o build grava um index.html por URL.",
+    body: "Cada arquivo de página retorna HTML seguro, e o build grava um index.html por URL.",
   },
   {
     slug: "segundo-post",

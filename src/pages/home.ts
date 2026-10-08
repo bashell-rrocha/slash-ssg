@@ -1,3 +1,4 @@
+import type { SafeHtml } from "@_bashell/slash/ssr";
 import { layout } from "../components/layout";
 import { posts } from "../data/posts";
 import { Counter } from "../islands/counter";
@@ -7,7 +8,7 @@ import { island } from "../lib/island";
 import { view } from "../lib/renderer";
 import styles from "../styles.module.css";
 
-export function home(): string {
+export function home(): SafeHtml {
   const hero = image("hero.jpg", { alt: "Paisagem de exemplo" });
   const images = [image("gallery/one.png", { alt: "Primeira" }), image("gallery/two.png", { alt: "Segunda" })];
   return layout(view`

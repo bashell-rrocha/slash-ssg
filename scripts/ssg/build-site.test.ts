@@ -140,7 +140,7 @@ test("JS do client não contém o renderer de string do servidor (htmlString)", 
   const clientJs = (await readdir(dist)).find((f) => /^client-.*\.js$/.test(f)) ?? "";
   const js = await read(clientJs);
   // Mensagem exclusiva de server-render: some do client quando __SERVER__ é false
-  const marker = "SSR: Unexpected object in child position";
+  const marker = "[slash] SSR: ";
   expect(js).not.toContain(marker);
   expect(js).not.toContain("data-reactive-value");
   // O bundle de prerender (target node, __SERVER__ true) continua com o renderer de string
@@ -172,10 +172,11 @@ test("rota com erro faz buildSite rejeitar com SsgError citando a URL", async ()
   try {
     await writeFile(
       join(tmp, "src/routes.ts"),
-      `import type { Route } from "./lib/types";
+      `import { unsafeHtml } from "@_bashell/slash/ssr";
+import type { Route } from "./lib/types";
 export const routes: Route[] = [
   { path: "/quebrada", head: { title: "Quebrada" }, page: () => { throw new Error("boom"); } },
-  { path: "/404", head: { title: "404" }, page: () => "<h1>404</h1>" },
+  { path: "/404", head: { title: "404" }, page: () => unsafeHtml("<h1>404</h1>") },
 ];\n`,
     );
     const err = await buildSite({ root: tmp, dev: false }).then(
@@ -206,7 +207,7 @@ test("public/robots.txt existente vence o gerado e arquivo de public/ que colide
   }
 }, 60_000);
 
-const routesSource = (routes: string) => `import type { Route } from "./lib/types";\n${routes}\n`;
+const routesSource = (routes: string) => `import { unsafeHtml } from "@_bashell/slash/ssr";\nimport type { Route } from "./lib/types";\n${routes}\n`;
 
 test("erro lançado no carregamento do bundle (nível de módulo de routes.ts) vira SsgError", async () => {
   const tmp = await copyTemplate("test-carga");
@@ -230,9 +231,10 @@ export const routes: Route[] = [];\n`,
 }, 60_000);
 
 test.each([
-  ["head undefined", "head: undefined as never, page: () => '<p>x</p>'", "head deve resolver para um objeto"],
-  ["head função que resolve para null", "head: () => null as never, page: () => '<p>x</p>'", "(recebido: null)"],
-  ["page que não retorna string", "head: { title: 'X' }, page: () => 42 as never", "page deve retornar uma string"],
+  ["head undefined", "head: undefined as never, page: () => unsafeHtml('<p>x</p>')", "head deve resolver para um objeto"],
+  ["head função que resolve para null", "head: () => null as never, page: () => unsafeHtml('<p>x</p>')", "(recebido: null)"],
+  ["page que retorna número", "head: { title: 'X' }, page: () => 42 as never", "page deve retornar HTML seguro"],
+  ["page que retorna string comum", "head: { title: 'X' }, page: () => '<p>x</p>' as never", "(recebido: string)"],
   ["page que retorna undefined", "head: { title: 'X' }, page: () => undefined as never", "(recebido: undefined)"],
 ])(
   "%s lança SsgError citando a URL",
@@ -243,7 +245,7 @@ test.each([
         join(tmp, "src/routes.ts"),
         routesSource(`export const routes: Route[] = [
   { path: "/ruim", ${route} },
-  { path: "/404", head: { title: "404" }, page: () => "<h1>404</h1>" },
+  { path: "/404", head: { title: "404" }, page: () => unsafeHtml("<h1>404</h1>") },
 ];`),
       );
       const err = await buildSite({ root: tmp, dev: false }).then(
@@ -272,7 +274,7 @@ test("build com falha não apaga o dist/ anterior nem deixa staging; build com s
       join(tmp, "src/routes.ts"),
       routesSource(`export const routes: Route[] = [
   { path: "/quebrada", head: { title: "Q" }, page: () => { throw new Error("boom"); } },
-  { path: "/404", head: { title: "404" }, page: () => "<h1>404</h1>" },
+  { path: "/404", head: { title: "404" }, page: () => unsafeHtml("<h1>404</h1>") },
 ];`),
     );
     await expect(buildSite({ root: tmp, dev: false })).rejects.toBeInstanceOf(SsgError);
@@ -284,8 +286,8 @@ test("build com falha não apaga o dist/ anterior nem deixa staging; build com s
     await writeFile(
       join(tmp, "src/routes.ts"),
       routesSource(`export const routes: Route[] = [
-  { path: "/", head: { title: "Nova" }, page: () => "<h1>nova</h1>" },
-  { path: "/404", head: { title: "404" }, page: () => "<h1>404</h1>" },
+  { path: "/", head: { title: "Nova" }, page: () => unsafeHtml("<h1>nova</h1>") },
+  { path: "/404", head: { title: "404" }, page: () => unsafeHtml("<h1>404</h1>") },
 ];`),
     );
     await buildSite({ root: tmp, dev: false });

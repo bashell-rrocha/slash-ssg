@@ -1,3 +1,5 @@
+> **Documento histórico** — o contrato atual está no README.
+
 # slash-ssg — Design
 
 **Data:** 2026-10-07

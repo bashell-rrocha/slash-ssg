@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { unsafeHtml } from "@_bashell/slash/ssr";
 import { SsgError } from "./errors";
 import { absoluteUrl, buildUrl, expandRoutes, urlToFile } from "./routes-core";
 import type { Route } from "./types";
 
-const page = () => "<p>x</p>";
+const page = () => unsafeHtml("<p>x</p>");
 const head = { title: "T" };
 
 describe("routes-core", () => {

@@ -1,5 +1,6 @@
 import { routes } from "../routes";
 import { site } from "../site";
+import { isSafeHtml } from "@_bashell/slash/ssr";
 import { SsgError } from "./errors";
 import { renderHead } from "./head-core";
 import { resolveOgImage, setImageManifest, takeOgRequests } from "./image";
@@ -45,8 +46,8 @@ export async function prerender(input: PrerenderInput): Promise<{ pages: Rendere
           throw new SsgError(`head deve resolver para um objeto com title (recebido: ${describe(head)})`);
         }
         const body: unknown = await route.page(params);
-        if (typeof body !== "string") {
-          throw new SsgError(`page deve retornar uma string de HTML (recebido: ${describe(body)})`);
+        if (!isSafeHtml(body)) {
+          throw new SsgError(`page deve retornar HTML seguro, ex.: view\`...\` (recebido: ${describe(body)})`);
         }
         const ogImage = resolveOgImage(head.image ?? site.defaultHead?.image, site.baseUrl);
         const headHtml = renderHead({
@@ -60,7 +61,7 @@ export async function prerender(input: PrerenderInput): Promise<{ pages: Rendere
         const html = renderDocument({
           shell: input.shell,
           head: headHtml,
-          body,
+          body: body.value,
           scriptSrc: input.scriptSrc,
           lang: site.lang,
         });
