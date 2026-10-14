@@ -233,6 +233,7 @@ function lineViolations(file: string, isViolation: (line: string) => boolean): V
 
 /** Em CSS, cor nomeada só conta no valor de uma declaração (depois do `:`), fora de `var(--…)`. */
 function hasNamedColor(line: string): boolean {
+  if (/[{,]\s*$/.test(line)) return false; // seletor, não declaração
   const colon = line.indexOf(":");
   if (colon === -1) return false;
   const value = line.slice(colon + 1).replace(/var\([^)]*\)/g, "");
@@ -507,6 +508,8 @@ describe("hasLiteralColor", () => {
     "  background: color-mix(in srgb, var(--a), var(--b));",
     "  font: 1rem system-ui;",
     ".white {",
+    ".btn:not(.red) {",
+    "a:hover,",
   ])("não acusa propriedade, variável ou palavra-chave sem cor: %s", (line) => {
     // Arrange
     const file = "src/styles.module.css";
