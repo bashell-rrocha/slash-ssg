@@ -2,6 +2,7 @@ import type { SafeHtml } from "@_bashell/slash/ssr";
 import { view } from "../lib/renderer";
 import { site } from "../site";
 import styles from "../styles.module.css";
+import "../tokens.module.css";
 
 // Casca comum das páginas (navegação, conteúdo, rodapé); devolve SafeHtml: `content` entra como está e textos interpolados (ex.: site.name) são escapados
 export function layout(content: unknown): SafeHtml {

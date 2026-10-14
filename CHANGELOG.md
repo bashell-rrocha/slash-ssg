@@ -2,6 +2,22 @@
 
 Todas as mudanças relevantes deste projeto são registradas aqui, seguindo [Conventional Commits](https://www.conventionalcommits.org/) e [SemVer](https://semver.org/).
 
+## [0.0.3] — 2026-10-14
+
+### Adicionado
+
+- `src/architecture.test.ts`: regras de camadas, imports de `src/data`, cores literais (hex, funções de cor e cores
+  nomeadas), `unsafeHtml`, tipagem (`any`, `@ts-ignore`, `@ts-nocheck`), testes AAA, `@keyframes` em CSS module e
+  registro de todo arquivo de dados em `allContent`, ajustáveis pelas constantes do topo do arquivo.
+- Portão de conteúdo: `src/data/gate.ts`, `src/data/walk.ts`, `src/data/index.ts` (`allContent`),
+  `scripts/content-gate.ts`, scripts `gate` e `build:prod`, e `content-release.json` de demonstração (apague ao derivar
+  um projeto). Link markdown `[texto](url)` não conta como placeholder.
+- `src/tokens.module.css`: única fonte de cor do template.
+
+### Alterado
+
+- `styles.module.css` usa `var(--color-…)`; os posts de exemplo são marcados `fictitious: true`.
+
 ## [0.0.2] — 2026-10-08
 
 Compatível com `@_bashell/slash` 0.0.3 (seguro por padrão).

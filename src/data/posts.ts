@@ -1,4 +1,6 @@
 export interface Post {
+  /** Conteúdo de exemplo: o portão de conteúdo só deixa publicar com liberação em content-release.json. */
+  fictitious?: true;
   slug: string;
   title: string;
   summary: string;
@@ -7,12 +9,14 @@ export interface Post {
 
 export const posts: Post[] = [
   {
+    fictitious: true,
     slug: "primeiro-post",
     title: "Primeiro post",
     summary: "Como começar com o slash-ssg.",
     body: "Cada arquivo de página retorna HTML seguro, e o build grava um index.html por URL.",
   },
   {
+    fictitious: true,
     slug: "segundo-post",
     title: "Segundo post",
     summary: "Ilhas e imagens.",
