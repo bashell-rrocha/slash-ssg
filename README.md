@@ -10,6 +10,8 @@ O build gera tudo em `dist/`, pronto para qualquer hospedagem estática.
 | --- | --- |
 | `bun run dev` | Build em modo dev + servidor com live reload (observa `src/` e `public/`) |
 | `bun run build` | Build de produção em `dist/` (nomes com hash, JS/CSS minificados) |
+| `bun run build:prod` | Portão de conteúdo e, se ele abrir, o build (use no deploy) |
+| `bun run gate` | Portão de conteúdo: lista fictícios, placeholders e pendências (ver [Conteúdo](#conteúdo)) |
 | `bun run preview` | Serve o `dist/` já gerado |
 | `bun run test` | Testes unitários e de build (`bun test src/ scripts/`) |
 | `bun run test:e2e` | Testes de ponta a ponta com Playwright (faz o build e sobe o preview sozinho) |
@@ -31,11 +33,39 @@ public/           copiado como está para dist/ (index.html é a casca do docume
 src/routes.ts     lista de rotas
 src/site.ts       configuração do site
 src/pages/        funções que retornam `SafeHtml` (``view`...` ``) de cada página
+src/components/   peças de layout reaproveitadas pelas páginas
 src/islands/      componentes interativos
+src/data/         conteúdo (só pages, routes.ts e scripts importam valores daqui) e o portão de conteúdo
+src/tokens.module.css  única fonte de cor (var(--…) no resto)
 src/assets/images imagens processadas pelo pipeline
 src/lib/          núcleo do template (head, imagens, ilhas, prerender)
-scripts/          build, dev, preview
+scripts/          build, dev, preview, content-gate
+src/architecture.test.ts  regras de arquitetura (ver abaixo)
 ```
+
+## Arquitetura
+
+`src/architecture.test.ts` roda com `bun run test` e falha quando o código sai das regras: cada camada só importa o que
+a matriz permite (`components/`, `pages/`, `islands/` e, se você criar, `atoms/`, `molecules/`, `organisms/`,
+`templates/` dentro de `components/`); só `pages/`, `routes.ts`, `scripts/` e `data/` importam valores de `src/data`;
+nenhuma cor literal fora de `src/tokens.module.css` e `src/styles/themes/*.css`; `unsafeHtml` só nos arquivos
+listados; nada de `any`, `@ts-ignore` ou `@ts-expect-error` sem justificativa; testes no padrão AAA
+(`// Arrange`, `// Act`, `// Assert`); nenhum `@keyframes` em CSS module. As constantes no topo do arquivo
+(`LAYERS`, `ALLOWED_IMPORTS`, `COLOR_FILES`, `UNSAFE_HTML_ALLOWED`, `LEGACY`) adaptam as regras ao projeto.
+`src/lib/` e `scripts/ssg/` (o framework) ficam de fora.
+
+## Conteúdo
+
+`bun run gate` percorre `allContent` (`src/data/index.ts`; registre ali cada arquivo de dados novo) e aponta:
+
+- **fictitious**: registro com `fictitious: true` (exemplo, depoimento inventado, cliente de mentira);
+- **placeholder**: texto com `[...]`, como `[E-MAIL]`;
+- **pending**: registro com `pending: ["o que falta confirmar"]`.
+
+Placeholder e pending sempre fecham o portão. Fictício só passa com `content-release.json` cujo `digest` é o que o
+`gate` imprime: quem libera assina `approvedBy`, `approvedAt` (AAAA-MM-DD) e `note`. Qualquer fictício novo ou
+alterado muda o digest e fecha o portão de novo. O `content-release.json` do template libera só os dois posts de
+exemplo.
 
 A casca `public/index.html` precisa conter os marcadores `<!--slash:head-->` e `<!--slash:app-->`.
 O atributo `lang` do `<html>` vem de `site.lang`.
@@ -150,4 +180,6 @@ export const site: SiteConfig = {
 2. No `package.json`, troque `@_bashell/slash` de `workspace:*` para a versão do npm (`^0.0.1`).
 3. Remova o alias `paths` (para `../slash/src`) do `tsconfig.json`.
 4. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun install && bun run dev`.
-5. Para os testes E2E, instale o navegador do Playwright uma vez: `bunx playwright install chromium`.
+5. **Apague `content-release.json`** e troque os posts de exemplo por conteúdo real; no deploy use
+   `bun run build:prod`, que não publica conteúdo fictício sem liberação.
+6. Para os testes E2E, instale o navegador do Playwright uma vez: `bunx playwright install chromium`.
