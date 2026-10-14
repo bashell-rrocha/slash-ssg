@@ -1,7 +1,3 @@
-:root {
-  color-scheme: light dark;
-}
-
 .page {
   margin: 0 auto;
   max-width: 48rem;
@@ -18,7 +14,7 @@
   display: flex;
   gap: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #8884;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .main {
@@ -27,7 +23,7 @@
 
 .footer {
   padding-top: 1rem;
-  border-top: 1px solid #8884;
+  border-top: 1px solid var(--color-border);
   font-size: 0.875rem;
   opacity: 0.7;
 }
@@ -46,8 +42,8 @@
   padding: 0.5rem 1rem;
   border: 0;
   border-radius: 0.375rem;
-  background: royalblue;
-  color: white;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
   font: inherit;
   cursor: pointer;
 }
