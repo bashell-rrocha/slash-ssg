@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
+    "build:prod": "bun run gate && bun run build",
+    "gate": "bun run scripts/content-gate.ts",
     "preview": "bun run scripts/preview.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test src/ scripts/",
