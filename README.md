@@ -48,24 +48,30 @@ src/architecture.test.ts  regras de arquitetura (ver abaixo)
 `src/architecture.test.ts` roda com `bun run test` e falha quando o código sai das regras: cada camada só importa o que
 a matriz permite (`components/`, `pages/`, `islands/` e, se você criar, `atoms/`, `molecules/`, `organisms/`,
 `templates/` dentro de `components/`); só `pages/`, `routes.ts`, `scripts/` e `data/` importam valores de `src/data`;
-nenhuma cor literal fora de `src/tokens.module.css` e `src/styles/themes/*.css`; `unsafeHtml` só nos arquivos
-listados; nada de `any`, `@ts-ignore` ou `@ts-expect-error` sem justificativa; testes no padrão AAA
-(`// Arrange`, `// Act`, `// Assert`); nenhum `@keyframes` em CSS module. As constantes no topo do arquivo
-(`LAYERS`, `ALLOWED_IMPORTS`, `COLOR_FILES`, `UNSAFE_HTML_ALLOWED`, `LEGACY`) adaptam as regras ao projeto.
-`src/lib/` e `scripts/ssg/` (o framework) ficam de fora.
+nenhuma cor literal (hex, funções de cor como `rgb()`/`oklch()` e cores nomeadas como `white`) fora de
+`src/tokens.module.css` e `src/styles/themes/*.css`; `unsafeHtml` só nos arquivos listados; nada de `any`,
+`@ts-ignore`, `@ts-nocheck` ou `@ts-expect-error` sem justificativa; testes no padrão AAA (`// Arrange`, `// Act`,
+`// Assert`); nenhum `@keyframes` em CSS module; todo arquivo de `src/data/` registrado em `allContent`.
+
+As constantes no topo do arquivo adaptam as regras ao projeto: `LAYERS` e `ALLOWED_IMPORTS` (camadas e matriz),
+`SHARED` (o que qualquer camada importa), `DATA` e `DATA_INFRA`, `COLOR_FILES` e `THEME_FILE`, `UNSAFE_HTML_ALLOWED`
+e `LEGACY` (arquivos isentos das regras de camada, dados, cor e AAA; a lista só diminui).
+
+Ficam de fora: `src/lib/` e `scripts/ssg/` (o framework, com testes próprios), `tests/e2e/` e imports que não são
+relativos (pacotes e aliases de `paths`): use caminhos relativos dentro de `src/` para as regras valerem.
 
 ## Conteúdo
 
 `bun run gate` percorre `allContent` (`src/data/index.ts`; registre ali cada arquivo de dados novo) e aponta:
 
 - **fictitious**: registro com `fictitious: true` (exemplo, depoimento inventado, cliente de mentira);
-- **placeholder**: texto com `[...]`, como `[E-MAIL]`;
+- **placeholder**: texto com `[...]`, como `[E-MAIL]` (link markdown `[texto](url)` não conta);
 - **pending**: registro com `pending: ["o que falta confirmar"]`.
 
 Placeholder e pending sempre fecham o portão. Fictício só passa com `content-release.json` cujo `digest` é o que o
 `gate` imprime: quem libera assina `approvedBy`, `approvedAt` (AAAA-MM-DD) e `note`. Qualquer fictício novo ou
 alterado muda o digest e fecha o portão de novo. O `content-release.json` do template libera só os dois posts de
-exemplo.
+exemplo; enquanto o arquivo existir, `bun run test` confere que ele ainda libera o conteúdo atual.
 
 A casca `public/index.html` precisa conter os marcadores `<!--slash:head-->` e `<!--slash:app-->`.
 O atributo `lang` do `<html>` vem de `site.lang`.

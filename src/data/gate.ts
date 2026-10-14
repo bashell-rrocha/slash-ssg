@@ -22,7 +22,8 @@ export interface GateVerdict {
   readonly lines: readonly string[];
 }
 
-const PLACEHOLDER = /\[[^\]\n]+\]/;
+/** `[TEXTO]` a preencher; `[texto](url)` é link markdown, não placeholder. */
+const PLACEHOLDER = /\[[^\]\n]+\](?!\()/;
 const SAMPLE_LENGTH = 60;
 const KINDS: readonly FindingKind[] = ["fictitious", "placeholder", "pending"];
 const RELEASE_FIELDS: readonly string[] = ["approvedBy", "approvedAt", "digest", "note"];

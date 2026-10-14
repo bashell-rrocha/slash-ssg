@@ -28,6 +28,7 @@ type Layer = keyof typeof LAYERS;
 const DATA = "src/data/";
 /** Framework, configuração e estilos globais: qualquer camada pode importar. */
 const SHARED: readonly string[] = [
+  "src/assets/",
   "src/lib/",
   "src/styles/",
   "src/site",
@@ -45,6 +46,9 @@ const ALLOWED_IMPORTS = {
   pages: [LAYERS.components, LAYERS.pages, LAYERS.islands, DATA, ...SHARED],
   islands: [LAYERS.components, LAYERS.islands, ...SHARED],
 } as const satisfies Record<Layer, readonly string[]>;
+
+/** Infraestrutura do portão de conteúdo: não são dados e ficam fora de `allContent`. */
+const DATA_INFRA: readonly string[] = ["src/data/gate.ts", "src/data/walk.ts"];
 
 /** Únicos arquivos com cor literal: os tokens e os temas. */
 const COLOR_FILES: readonly string[] = ["src/tokens.module.css"];
@@ -72,8 +76,30 @@ const AAA_MARKER = /\/\/ (Arrange|Act|Assert)\b/g;
 const CSS_HEX = /#[0-9a-f]{3,8}\b/i;
 const TS_HEX = /(fill|stroke|stop-color|color|background|--[\w-]+)\s*[:=]\s*["']?#[0-9a-f]{3,8}\b/i;
 const TS_HEX_STRING = /["'`]#[0-9a-f]{3,8}["'`]/i;
-const COLOR_FUNCTION = /rgba?\(|hsla?\(/i;
-const FORBIDDEN_TYPING = /@ts-ignore|\bas any\b|:\s*any\b/;
+const COLOR_FUNCTION = /(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i;
+/** Em TS, `color(` seria qualquer função chamada color: fica só nas funções inequívocas. */
+const TS_COLOR_FUNCTION = /(?<![\w-])(?:rgba?|hsla?|hwb|oklab|oklch)\(/i;
+/** Cores nomeadas do CSS (as 148 do CSS Color 4); `transparent` e `currentcolor` são palavras-chave, não cor. */
+const NAMED_COLORS = new Set(
+  (
+    "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood " +
+    "cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod " +
+    "darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon " +
+    "darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray " +
+    "dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green " +
+    "greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon " +
+    "lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon " +
+    "lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta " +
+    "maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen " +
+    "mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive " +
+    "olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru " +
+    "pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen " +
+    "seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato " +
+    "turquoise violet wheat white whitesmoke yellow yellowgreen"
+  ).split(" "),
+);
+const CSS_WORD = /(?<![\w-])[a-z]+(?![\w-])/gi;
+const FORBIDDEN_TYPING = /@ts-ignore|@ts-nocheck|\bas any\b|:\s*any\b|<any[,>]|\bany\[\]/;
 const EXPECT_ERROR = /@ts-expect-error(.*)$/;
 const MIN_JUSTIFICATION = 10;
 const KEYFRAMES_RULE = /^\s*@keyframes\b/;
@@ -205,9 +231,17 @@ function lineViolations(file: string, isViolation: (line: string) => boolean): V
     .flatMap((line, index) => (isViolation(line) ? [{ file, detail: `linha ${index + 1}: ${line.trim()}` }] : []));
 }
 
+/** Em CSS, cor nomeada só conta no valor de uma declaração (depois do `:`), fora de `var(--…)`. */
+function hasNamedColor(line: string): boolean {
+  const colon = line.indexOf(":");
+  if (colon === -1) return false;
+  const value = line.slice(colon + 1).replace(/var\([^)]*\)/g, "");
+  return [...value.matchAll(CSS_WORD)].some((match) => NAMED_COLORS.has(match[0].toLowerCase()));
+}
+
 function hasLiteralColor(file: string, line: string): boolean {
-  const hasHex = file.endsWith(".css") ? CSS_HEX.test(line) : TS_HEX.test(line) || TS_HEX_STRING.test(line);
-  return hasHex || COLOR_FUNCTION.test(line);
+  if (file.endsWith(".css")) return CSS_HEX.test(line) || COLOR_FUNCTION.test(line) || hasNamedColor(line);
+  return TS_HEX.test(line) || TS_HEX_STRING.test(line) || TS_COLOR_FUNCTION.test(line);
 }
 
 function hasForbiddenTyping(line: string): boolean {
@@ -446,6 +480,55 @@ describe("hasLiteralColor", () => {
     expect(flagged).toEqual([true, true]);
   });
 
+  test.each([
+    "  background: royalblue;",
+    "  color: white;",
+    "  border: 1px solid Red;",
+    "  color: oklch(70% 0.1 200);",
+    "  background: color-mix(in srgb, var(--a) 40%, white);",
+    "  color: hwb(0 0% 0%);",
+    "  color: color(display-p3 1 0 0);",
+  ])("acusa cor nomeada e função de cor em CSS: %s", (line) => {
+    // Arrange
+    const file = "src/styles.module.css";
+
+    // Act
+    const flagged = hasLiteralColor(file, line);
+
+    // Assert
+    expect(flagged).toBe(true);
+  });
+
+  test.each([
+    "  white-space: nowrap;",
+    "  color: var(--color-white);",
+    "  border-color: currentcolor;",
+    "  background: transparent;",
+    "  background: color-mix(in srgb, var(--a), var(--b));",
+    "  font: 1rem system-ui;",
+    ".white {",
+  ])("não acusa propriedade, variável ou palavra-chave sem cor: %s", (line) => {
+    // Arrange
+    const file = "src/styles.module.css";
+
+    // Act
+    const flagged = hasLiteralColor(file, line);
+
+    // Assert
+    expect(flagged).toBe(false);
+  });
+
+  test("não acusa chamada de função chamada color em TS", () => {
+    // Arrange
+    const line = "const c = color(theme);";
+
+    // Act
+    const flagged = hasLiteralColor("src/components/x.ts", line);
+
+    // Assert
+    expect(flagged).toBe(false);
+  });
+
   test("não acusa âncora de link em TS", () => {
     // Arrange
     const line = 'const href = "#contato";';
@@ -459,7 +542,16 @@ describe("hasLiteralColor", () => {
 });
 
 describe("hasForbiddenTyping", () => {
-  test.each(["const x: any = 1;", "foo as any", "// @ts-ignore", "// @ts-expect-error"])("acusa %s", (line) => {
+  test.each([
+    "const x: any = 1;",
+    "foo as any",
+    "// @ts-ignore",
+    "// @ts-expect-error",
+    "// @ts-nocheck",
+    "const list: Array<any> = [];",
+    "const xs = [] as any[];",
+    "const p = <any>value;",
+  ])("acusa %s", (line) => {
     // Arrange
     const source = line;
 
@@ -585,6 +677,21 @@ describe("arquitetura do projeto", () => {
 
     // Assert
     expect(violations).toEqual([]);
+  });
+
+  test("regra 10: todo arquivo de dados está registrado em allContent (src/data/index.ts)", () => {
+    // Arrange
+    const index = `${DATA}index.ts`;
+    const dataFiles = tsSourceFiles().filter(
+      (file) => file.startsWith(DATA) && !isTest(file) && !DATA_INFRA.includes(file) && file !== index,
+    );
+
+    // Act
+    const registered = new Set(importsOf(index).map((ref) => `${ref.target}.ts`));
+    const missing = dataFiles.filter((file) => !registered.has(file));
+
+    // Assert
+    expect(missing).toEqual([]);
   });
 
   test("regra 9: nenhum @keyframes em CSS module (o Bun renomeia o nome, mas não a referência em animation)", () => {

@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { auditContent, fictitiousDigest } from "../src/data/gate";
 import { allContent } from "../src/data/index";
 import { runGate } from "./content-gate";
 
+const RELEASE_FILE = resolve(import.meta.dir, "..", "content-release.json");
 const FICTITIOUS_CONTENT = { catalog: [{ fictitious: true, name: "Cliente de exemplo" }] };
 
 describe("runGate", () => {
@@ -56,15 +57,15 @@ describe("runGate", () => {
     expect(result.out).toContain("content-release.json inválido");
   });
 
-  test("os posts de exemplo do template são fictícios e o content-release.json de demonstração os libera", () => {
+  test.skipIf(!existsSync(RELEASE_FILE))("com content-release.json no projeto, ele libera o conteúdo atual", () => {
     // Arrange
-    const releaseText = readFileSync(resolve(import.meta.dir, "..", "content-release.json"), "utf8");
+    const releaseText = readFileSync(RELEASE_FILE, "utf8");
 
     // Act
     const result = runGate(allContent, releaseText);
 
     // Assert
-    expect(result.out).toContain("fictitious (2)");
+    expect(result.out).not.toContain("inválido");
     expect(result.code).toBe(0);
   });
 });

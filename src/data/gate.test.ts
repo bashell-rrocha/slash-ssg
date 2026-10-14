@@ -34,6 +34,17 @@ describe("auditContent", () => {
     expect(findings[0]).toMatchObject({ kind: "fictitious", path: "$.a", sample: "Cliente de exemplo" });
   });
 
+  test("link markdown [texto](url) não vira placeholder", () => {
+    // Arrange
+    const content = { post: { body: "Veja a [documentação](https://example.com) do Slash." } };
+
+    // Act
+    const findings = auditContent(content);
+
+    // Assert
+    expect(findings).toEqual([]);
+  });
+
   test("string com [...] vira achado placeholder", () => {
     // Arrange
     const content = { footer: { email: "[E-MAIL]" } };
