@@ -27,7 +27,13 @@ type Layer = keyof typeof LAYERS;
 
 const DATA = "src/data/";
 /** Framework, configuração e estilos globais: qualquer camada pode importar. */
-const SHARED: readonly string[] = ["src/lib/", "src/styles/", "src/site", "src/styles.module.css", "src/tokens.module.css"];
+const SHARED: readonly string[] = [
+  "src/lib/",
+  "src/styles/",
+  "src/site",
+  "src/styles.module.css",
+  "src/tokens.module.css",
+];
 
 /** Entradas com "/" no fim são pastas; as demais são um módulo exato. */
 const ALLOWED_IMPORTS = {
@@ -414,19 +420,20 @@ describe("isAllowedImport", () => {
 });
 
 describe("hasLiteralColor", () => {
-  test.each(['const c = "#ff0000";', '  { primary: "#fff" },', "const c = `#abc`;"])(
-    "acusa hex solto em string de TS: %s",
-    (line) => {
-      // Arrange
-      const file = "src/components/x.ts";
+  test.each([
+    'const c = "#ff0000";',
+    '  { primary: "#fff" },',
+    "const c = `#abc`;",
+  ])("acusa hex solto em string de TS: %s", (line) => {
+    // Arrange
+    const file = "src/components/x.ts";
 
-      // Act
-      const flagged = hasLiteralColor(file, line);
+    // Act
+    const flagged = hasLiteralColor(file, line);
 
-      // Assert
-      expect(flagged).toBe(true);
-    },
-  );
+    // Assert
+    expect(flagged).toBe(true);
+  });
 
   test("acusa hex e rgb em CSS", () => {
     // Arrange
