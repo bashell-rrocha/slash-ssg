@@ -1,5 +1,9 @@
 # slash-ssg
 
+> **Projeto criado pelo "Use this template"?** Rode `bun run standalone` (ou `bun run standalone --without-ui`)
+> **antes** do `bun install`: o `workspace:*` do `slash-ui` só instala dentro do monorepo. Ver
+> [Criar um projeto derivado](#criar-um-projeto-derivado).
+
 Template de site estático com [Slash](../slash): uma página HTML por URL, imagens otimizadas
 (AVIF/WebP/JPEG responsivos), CSS Modules e ilhas interativas hidratadas só onde necessário.
 O build gera tudo em `dist/`, pronto para qualquer hospedagem estática.
@@ -192,7 +196,10 @@ o core vem do npm (`@_bashell/slash`), e o exemplo `examples/slash-ui` usa o kit
      `bun run standalone && GITHUB_TOKEN=$(gh auth token) bun install`. O comando troca o `workspace:*` pelo pacote
      e põe o escopo no `bunfig.toml` (o token vem do ambiente, nunca de arquivo);
    - sem o `slash-ui`: `bun run standalone --without-ui && bun install`. Tira o pacote, o `examples/slash-ui` e os
-     scripts `ui:*`.
+     scripts `ui:*` (lista o que apaga; recusa, sem gravar nada, se `examples/slash-ui` tiver mudanças no git). O
+     `examples/` só sai do script `test` (e do disco) se não sobrar outro exemplo.
+   - se o `bunfig.toml` já define os escopos em linha (`scopes = { ... }`), o comando não mexe nele e pede para
+     acrescentar o escopo `@bashell-rrocha` à mão; opção desconhecida encerra com o uso.
 3. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun run dev`. A demo de `src/` pode ser trocada à vontade: o teste do
    framework usa a própria cópia (`scripts/ssg/__fixtures__/site/`).
 4. **Apague `content-release.json`** e troque os posts de exemplo por conteúdo real; no deploy use

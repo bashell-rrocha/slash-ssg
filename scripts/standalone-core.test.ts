@@ -23,7 +23,7 @@ describe("standalone (com o slash-ui)", () => {
 
     // Assert
     expect(out.problems).toEqual([]);
-    expect(out.pkg.devDependencies["@_bashell/slash-ui"]).toBe(SLASH_UI_PACKAGE);
+    expect(out.pkg.devDependencies?.["@_bashell/slash-ui"]).toBe(SLASH_UI_PACKAGE);
     expect(SLASH_UI_PACKAGE).toBe("npm:@bashell-rrocha/slash-ui@^0.5.0");
     expect(out.bunfig).toBe(`[install.scopes]\n${SCOPE}\n`);
     expect(out.removeDirs).toEqual([]);
@@ -53,7 +53,7 @@ describe("standalone --without-ui", () => {
 
     // Assert
     expect(out.problems).toEqual([]);
-    expect("@_bashell/slash-ui" in out.pkg.devDependencies).toBe(false);
+    expect(out.pkg.devDependencies).not.toHaveProperty(["@_bashell/slash-ui"]);
     expect(out.pkg.scripts).toEqual({ test: "bun test src/ scripts/" });
     expect(out.removeDirs).toEqual(["examples/slash-ui"]);
     expect(out.bunfig).toBeNull();
@@ -84,5 +84,117 @@ describe("standalone: o que não instala fora do monorepo", () => {
     expect(out.problems).toEqual([
       '@_bashell/slash: "workspace:*" não instala fora do monorepo; use a versão publicada',
     ]);
+  });
+});
+
+describe("standalone: package.json incompleto", () => {
+  test("sem dependencies, devDependencies e scripts não quebra (com e sem o slash-ui)", () => {
+    // Arrange
+    const pkg = { name: "mínimo" };
+
+    // Act
+    const withUi = standalone({ pkg, bunfig: null, withoutUi: false });
+    const withoutUi = standalone({ pkg, bunfig: null, withoutUi: true });
+
+    // Assert
+    expect(withUi.problems).toEqual([]);
+    expect(withUi.pkg).toEqual({ name: "mínimo" });
+    expect(withoutUi.problems).toEqual([]);
+    expect(withoutUi.pkg).toEqual({ name: "mínimo" });
+  });
+
+  test("só com dependencies: troca o slash-ui ali e não inventa os outros campos", () => {
+    // Arrange
+    const pkg = { name: "x", dependencies: { "@_bashell/slash-ui": "workspace:*" } };
+
+    // Act
+    const out = standalone({ pkg, bunfig: null, withoutUi: false });
+
+    // Assert
+    expect(out.pkg).toEqual({ name: "x", dependencies: { "@_bashell/slash-ui": SLASH_UI_PACKAGE } });
+  });
+});
+
+describe("standalone: bunfig.toml que já mexe em escopos", () => {
+  test.each([
+    ['[install.scopes]\n"@bashell-rrocha" = "https://npm.pkg.github.com"\n'],
+    ['[install.scopes]\n@bashell-rrocha = { url = "https://npm.pkg.github.com" }\n'],
+    ["[install.scopes]\n'@bashell-rrocha' = \"https://npm.pkg.github.com\"\n"],
+    ['[install]\nscopes = { "@bashell-rrocha" = "https://npm.pkg.github.com" }\n'],
+    ['[install]\nscopes."@bashell-rrocha" = "https://npm.pkg.github.com"\n'],
+    ['install.scopes = { "@outro" = { url = "x" }, "@bashell-rrocha" = "https://npm.pkg.github.com" }\n'],
+  ])("escopo já definido em outro formato não é duplicado: %p", (bunfig) => {
+    // Arrange
+    const input = { pkg: PKG, bunfig, withoutUi: false };
+
+    // Act
+    const out = standalone(input);
+
+    // Assert
+    expect(out.problems).toEqual([]);
+    expect(out.bunfig).toBe(bunfig);
+  });
+
+  test("scopes em linha sem o escopo: não inventa, pede para acrescentar à mão", () => {
+    // Arrange
+    const bunfig = '[install]\nscopes = { "@outro" = "https://registry.exemplo" }\n';
+
+    // Act
+    const out = standalone({ pkg: PKG, bunfig, withoutUi: false });
+
+    // Assert
+    expect(out.bunfig).toBe(bunfig);
+    expect(out.problems).toHaveLength(1);
+    expect(out.problems[0]).toContain("bunfig.toml");
+    expect(out.problems[0]).toContain(SCOPE);
+  });
+
+  test("[install.scopes] de verdade recebe a entrada logo abaixo, mantendo as outras", () => {
+    // Arrange
+    const bunfig = '[install.scopes]\n"@outro" = "https://registry.exemplo"\n';
+
+    // Act
+    const out = standalone({ pkg: PKG, bunfig, withoutUi: false });
+
+    // Assert
+    expect(out.problems).toEqual([]);
+    expect(out.bunfig).toBe(`[install.scopes]\n${SCOPE}\n"@outro" = "https://registry.exemplo"\n`);
+  });
+
+  test("[install.scopes] só em comentário é ignorado: a tabela vai para o fim", () => {
+    // Arrange
+    const bunfig = "# [install.scopes]\n[test]\ncoverage = true\n";
+
+    // Act
+    const out = standalone({ pkg: PKG, bunfig, withoutUi: false });
+
+    // Assert
+    expect(out.problems).toEqual([]);
+    expect(out.bunfig).toBe(`# [install.scopes]\n[test]\ncoverage = true\n\n[install.scopes]\n${SCOPE}\n`);
+  });
+
+  test("escopo só em comentário não conta como definido", () => {
+    // Arrange
+    const bunfig = `# ${SCOPE}\n`;
+
+    // Act
+    const out = standalone({ pkg: PKG, bunfig, withoutUi: false });
+
+    // Assert
+    expect(out.bunfig).toBe(`# ${SCOPE}\n\n[install.scopes]\n${SCOPE}\n`);
+  });
+});
+
+describe("standalone --without-ui com outros exemplos", () => {
+  test("otherExamples: mantém examples/ no script test", () => {
+    // Arrange
+    const input = { pkg: PKG, bunfig: null, withoutUi: true, otherExamples: true };
+
+    // Act
+    const out = standalone(input);
+
+    // Assert
+    expect(out.pkg.scripts).toEqual({ test: "bun test src/ scripts/ examples/" });
+    expect(out.removeDirs).toEqual(["examples/slash-ui"]);
   });
 });
