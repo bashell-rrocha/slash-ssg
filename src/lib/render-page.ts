@@ -22,18 +22,33 @@ export function applyLang(shell: string, lang: string): string {
   });
 }
 
+// Define atributos na tag <html> da casca: substitui no lugar o que já existe, acrescenta o resto no fim (na ordem dada)
+export function applyHtmlAttrs(shell: string, attrs: Readonly<Record<string, string>>): string {
+  return shell.replace(/<html(\s[^>]*)?>/i, (_m, existing: string | undefined) => {
+    let out = existing ?? "";
+    for (const [name, value] of Object.entries(attrs)) {
+      const attr = `${name}="${escapeHtml(value)}"`;
+      const current = new RegExp(`\\s${name}\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)`, "i");
+      out = current.test(out) ? out.replace(current, () => ` ${attr}`) : `${out} ${attr}`;
+    }
+    return `<html${out}>`;
+  });
+}
+
 export function renderDocument(input: {
   shell: string;
   head: string;
   body: string;
   scriptSrc: string | null;
   lang: string;
+  /** Atributos do <html> além do lang (ex.: data-theme e data-mode do tema). */
+  htmlAttrs?: Readonly<Record<string, string>>;
 }): string {
   const { shell, head, body, scriptSrc, lang } = input;
   // Uma única passada: um head.extra (ou corpo) que contenha um marcador não é re-substituído.
   // Funções como replacement evitam que "$&" e similares sejam interpretados; só a 1ª ocorrência vale.
   const done = new Set<string>();
-  let doc = applyLang(shell, lang).replace(MARKERS, (marker) => {
+  let doc = applyHtmlAttrs(applyLang(shell, lang), input.htmlAttrs ?? {}).replace(MARKERS, (marker) => {
     if (done.has(marker)) return marker;
     done.add(marker);
     return marker === HEAD_MARKER ? head : body;

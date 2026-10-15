@@ -173,6 +173,12 @@ export const site: SiteConfig = {
 
 `sitemap.xml` é sempre gerado; `robots.txt` é gerado a partir de `baseUrl`, a menos que exista `public/robots.txt`.
 
+## Testes no GitHub
+
+`.github/workflows/test.yml` roda em todo PR para `develop` ou `main`, no push na `main` e sob demanda
+(*workflow_dispatch*), como um projeto criado do template (fora do monorepo): um job com `bun install`,
+`bun run test`, `bun run typecheck` e `bun run test:e2e`. Merge só com ele verde.
+
 ## Deploy
 
 - Comando de build: `bun run build`
@@ -182,10 +188,13 @@ export const site: SiteConfig = {
 
 ## Criar um projeto derivado
 
-1. Copie a pasta sem `.git/`, `docs/`, `node_modules/`, `dist/` e `.slash-cache/`.
-2. No `package.json`, troque `@_bashell/slash` de `workspace:*` para a versão do npm (`^0.0.1`).
-3. Remova o alias `paths` (para `../slash/src`) do `tsconfig.json`.
-4. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun install && bun run dev`.
-5. **Apague `content-release.json`** e troque os posts de exemplo por conteúdo real; no deploy use
+O repositório é um template do GitHub ("Use this template"), e o projeto novo roda fora do monorepo `slash-meta`
+sem preparo: o core vem do npm (`@_bashell/slash`).
+
+1. Crie o repositório pelo template (ou copie a pasta sem `.git/`, `node_modules/`, `dist/` e `.slash-cache/`).
+2. Instale as dependências: `bun install`.
+3. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun run dev`. A demo de `src/` pode ser trocada à vontade: o teste do
+   framework usa a própria cópia (`scripts/ssg/__fixtures__/site/`).
+4. **Apague `content-release.json`** e troque os posts de exemplo por conteúdo real; no deploy use
    `bun run build:prod`, que não publica conteúdo fictício sem liberação.
-6. Para os testes E2E, instale o navegador do Playwright uma vez: `bunx playwright install chromium`.
+5. Para os testes E2E, instale o navegador do Playwright uma vez: `bunx playwright install chromium`.

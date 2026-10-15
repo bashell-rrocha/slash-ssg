@@ -17,5 +17,5 @@
     }
   },
   "include": ["src", "plugins", "scripts", "global.d.ts"],
-  "exclude": ["public"]
+  "exclude": ["public", "scripts/ssg/__fixtures__/site"]
 }
