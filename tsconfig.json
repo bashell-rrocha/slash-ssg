@@ -16,6 +16,6 @@
       "@_bashell/slash": ["../slash/src/index.ts"]
     }
   },
-  "include": ["src", "plugins", "scripts", "global.d.ts"],
-  "exclude": ["public"]
+  "include": ["src", "plugins", "scripts", "global.d.ts", "examples"],
+  "exclude": ["public", "examples/*/dist", "examples/*/public"]
 }

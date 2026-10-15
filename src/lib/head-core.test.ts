@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
 import { unsafeHtml } from "@_bashell/slash/ssr";
+import { describe, expect, test } from "bun:test";
 import { renderHead, resolveTitle } from "./head-core";
 import type { SiteConfig } from "./types";
 
@@ -122,7 +122,7 @@ describe("head-core", () => {
     const out = renderHead({
       ...base,
       // biome-ignore lint/suspicious/noExplicitAny: simula um autor passando string em vez de SafeHtml
-      head: { title: "A", extra: '<script>alert(1)</script>' as any },
+      head: { title: "A", extra: "<script>alert(1)</script>" as any },
       cssHrefs: [],
     });
     expect(out).not.toContain("<script>alert(1)");
@@ -145,5 +145,25 @@ describe("head-core", () => {
     const off = renderHead({ ...base, head: { title: "A" } });
     expect(on).toContain('new EventSource("/__reload")');
     expect(off).not.toContain("EventSource");
+  });
+});
+
+describe("renderHead: título exato", () => {
+  test("exactTitle usa o título como está, sem o nome do site", () => {
+    // Arrange
+    const site = { name: "Site", baseUrl: "https://ex.com", lang: "pt-BR" };
+
+    // Act
+    const out = renderHead({
+      head: { title: "Hoje · Sereno", exactTitle: true },
+      site,
+      url: "/",
+      cssHrefs: [],
+      devReload: false,
+    });
+
+    // Assert
+    expect(out).toContain("<title>Hoje · Sereno</title>");
+    expect(out).toContain('<meta property="og:title" content="Hoje · Sereno">');
   });
 });
