@@ -85,10 +85,18 @@ describe("missingTermsVerdict", () => {
 });
 
 describe("processo", () => {
-  const roda = (env: Record<string, string>, ...args: string[]) =>
-    Bun.spawnSync(["bun", "scripts/boundary.ts", ...args], {
+  const script = join(import.meta.dir, "boundary.ts");
+  // Roda num repositório git vazio, para o scanner não ler este próprio arquivo de teste.
+  const roda = (env: Record<string, string>, ...args: string[]) => {
+    const repo = mkdtempSync(join(tmpdir(), "fronteira-repo-"));
+    Bun.spawnSync(["git", "init", "-q"], { cwd: repo });
+    const r = Bun.spawnSync(["bun", script, ...args], {
+      cwd: repo,
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", ...env },
     });
+    rmSync(repo, { recursive: true });
+    return r;
+  };
 
   test("sai com 1 e não imprime o termo achado", () => {
     // Arrange
@@ -118,6 +126,29 @@ describe("processo", () => {
 
     // Assert
     expect(r.exitCode).toBe(0);
+  });
+
+  test("--also com pasta inexistente falha e avisa", () => {
+    // Arrange
+    const dir = join(tmpdir(), "fronteira-nao-existe-xyz");
+
+    // Act
+    const r = roda({ BOUNDARY_TERMS: "termo-falso" }, "--also", dir);
+
+    // Assert
+    expect(r.exitCode).toBe(1);
+    expect(`${r.stdout}${r.stderr}`).toContain("pasta --also inexistente");
+  });
+
+  test("linhas CRLF contam normalmente", () => {
+    // Arrange
+    const texto = "um\r\ndois termo-falso\r\n";
+
+    // Act
+    const achados = scanText("x.md", texto, ["termo-falso"]);
+
+    // Assert
+    expect(achados).toEqual([{ file: "x.md", line: 2, term: 1 }]);
   });
 
   test("sem BOUNDARY_TERMS sai com 1 e avisa", () => {

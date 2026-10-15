@@ -10,14 +10,14 @@ export type Finding = { file: string; line: number; term: number };
 
 export function parseTerms(text: string): string[] {
   return text
-    .split("\n")
+    .split(/\r?\n/)
     .map((l) => l.trim().toLowerCase())
     .filter((l) => l !== "" && !l.startsWith("#"));
 }
 
 export function scanText(file: string, text: string, terms: string[]): Finding[] {
   const found: Finding[] = [];
-  text.split("\n").forEach((raw, i) => {
+  text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.toLowerCase();
     terms.forEach((t, n) => {
       if (line.includes(t)) found.push({ file, line: i + 1, term: n + 1 });
@@ -60,16 +60,23 @@ export function main(argv: string[], env: Record<string, string | undefined>): n
   const raw = env.BOUNDARY_TERMS;
   if (raw === undefined || parseTerms(raw).length === 0) {
     if (missingTermsVerdict(env) === "skip") {
-      console.warn("Aviso: BOUNDARY_TERMS indisponível em PR de fork; fronteira não verificada.");
+      console.log("::warning::BOUNDARY_TERMS ausente (PR de fork, sem segredos): fronteira não verificada");
       return 0;
     }
     console.error("BOUNDARY_TERMS ausente");
     return 1;
   }
   const terms = parseTerms(raw);
-  const files = [...trackedFiles(), ...alsoDirs(argv).flatMap(walk)];
+  const files = new Set(trackedFiles());
+  for (const dir of alsoDirs(argv)) {
+    if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) {
+      console.error(`pasta --also inexistente: ${dir}`);
+      return 1;
+    }
+    for (const file of walk(dir)) files.add(file);
+  }
   let total = 0;
-  for (const file of files) {
+  for (const file of [...files].sort()) {
     let buf: Buffer;
     try {
       if (!statSync(file).isFile()) continue;
