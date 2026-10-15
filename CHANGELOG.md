@@ -2,6 +2,23 @@
 
 Todas as mudanças relevantes deste projeto são registradas aqui, seguindo [Conventional Commits](https://www.conventionalcommits.org/) e [SemVer](https://semver.org/).
 
+## [0.0.5] — 2026-10-15
+
+### Adicionado
+
+- `bun.lock` versionado (gerado fora do monorepo) e `bun install --frozen-lockfile` na pipeline; o README explica como
+  regerar. Relatório do Playwright guardado quando a pipeline falha.
+
+### Alterado
+
+- `@types/bun` fixo (1.4.3), não mais `latest`.
+
+### Removido
+
+- `paths` do `tsconfig.json` que apontavam `@_bashell/slash` para `../slash/src`: num projeto criado do template com
+  uma pasta `../slash` ao lado, o build usaria esse código em silêncio. O core vem sempre do pacote instalado.
+- `docs/superpowers/` (planos e specs antigos do desenvolvimento no monorepo).
+
 ## [0.0.4] — 2026-10-15
 
 Compatível com `@_bashell/slash` 0.0.6 (npm). O template roda fora do monorepo `slash-meta` só com o core publicado.
