@@ -17,7 +17,7 @@ export function renderHead(input: {
   devReload: boolean;
 }): string {
   const { head, site, url, ogImage, cssHrefs, devReload } = input;
-  const title = resolveTitle(head.title, site.name);
+  const title = head.exactTitle ? head.title : resolveTitle(head.title, site.name);
   const description = head.description ?? site.defaultHead?.description;
   const canonical = head.canonical ?? absoluteUrl(site.baseUrl, url);
   const out: string[] = [`<title>${e(title)}</title>`];

@@ -36,6 +36,15 @@ describe("ui:build (slash-ssg)", async () => {
     expect(page("")).toContain("slash-ui: site de exemplo");
   });
 
+  test("head igual ao dos outros hospedeiros: título exato e viewport com a área segura", () => {
+    // Arrange / Act
+    const app = page("app/hoje");
+
+    // Assert
+    expect(app).toContain("<title>Hoje · Sereno</title>");
+    expect(app).toMatch(/<meta name="viewport" content="[^"]*viewport-fit=cover/);
+  });
+
   test("CSS dos temas com as fontes ao lado, e o PWA do app", () => {
     // Arrange
     const fonts = readdirSync(join(DIST, "themes/brisa/fonts"));

@@ -1,5 +1,5 @@
 import { EXAMPLE_APP, exampleSite, serviceWorkerSource, webManifest } from "@_bashell/slash-ui/host";
-import { copyHostAssets, themeColors } from "@_bashell/slash-ui/host/node";
+import { contentVersion, copyHostAssets, themeColors } from "@_bashell/slash-ui/host/node";
 import { readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { buildSite } from "../../scripts/ssg/build-site";
@@ -43,5 +43,7 @@ const assets = files(DIST).filter(
     file.startsWith("/app/icons/"),
 );
 const precache = [...pages.filter((p) => p.app).map((p) => p.path), ...assets];
-writeFileSync(join(DIST, "app", "sw.js"), serviceWorkerSource({ precache, scope: EXAMPLE_APP.startUrl }));
+// version: o conteúdo dos arquivos (tema, fontes e ícones mudam sem mudar de nome)
+const version = contentVersion(DIST, assets);
+writeFileSync(join(DIST, "app", "sw.js"), serviceWorkerSource({ precache, scope: EXAMPLE_APP.startUrl, version }));
 console.log(`[ui:build] ${summary.pages} páginas, ${precache.length} arquivos no pré-cache do app`);

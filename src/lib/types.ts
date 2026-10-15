@@ -4,6 +4,7 @@ export type Params = Record<string, string>;
 
 export interface Head {
   title: string;
+  exactTitle?: boolean; // true: o título vai como está, sem " | <nome do site>"
   description?: string;
   image?: string; // og:image: caminho em src/assets/images/, caminho em public/ ("/og.png") ou URL absoluta
   imageAlt?: string; // texto alternativo do og:image (og:image:alt e twitter:image:alt)

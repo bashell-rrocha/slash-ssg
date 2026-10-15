@@ -15,11 +15,12 @@ const themeColor = themeColors(APP_THEME).theme;
 const asHtml = (result: unknown) => unsafeHtml(String((result as { value?: string }).value ?? ""));
 
 function head(page: Pick<SitePage, "title" | "theme" | "mode" | "app" | "lang">) {
-  const { lang: _lang, ...attrs } = htmlAttrs(page as SitePage);
   return {
+    // O título da página como está (os outros hospedeiros não acrescentam o nome do site) e o lang dela no <html>
     title: page.title,
+    exactTitle: true,
     noindex: true,
-    htmlAttrs: attrs,
+    htmlAttrs: htmlAttrs(page as SitePage),
     extra: unsafeHtml(headLinks(page as SitePage, { base: "/", manifest: "/app/manifest.webmanifest", themeColor })),
   };
 }
