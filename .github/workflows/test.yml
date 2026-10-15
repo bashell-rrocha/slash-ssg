@@ -1,0 +1,77 @@
+# Testes em todo PR para develop ou main e em todo push na main (o merge do PR). Roda como um projeto criado do
+# template, fora do monorepo slash-meta: `bun run standalone` antes do `bun install` (ver README → "Criar um projeto
+# derivado").
+#   framework: sem o slash-ui (--without-ui), o que qualquer pessoa recebe do template público.
+#   slash-ui:  com o exemplo do kit (pacote privado @bashell-rrocha/slash-ui no GitHub Packages). O token precisa de
+#              read:packages com acesso ao pacote: o GITHUB_TOKEN deste repositório, se o pacote der acesso a ele
+#              (Package settings → Manage Actions access), ou o segredo SLASH_UI_TOKEN.
+name: test
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  framework:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Fora do monorepo, sem o slash-ui
+        run: bun run standalone --without-ui
+
+      - name: Instalar dependências
+        run: bun install
+
+      - name: Navegador do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      - name: Testes e tipos
+        run: bun run test && bun run typecheck
+
+      - name: Testes de ponta a ponta
+        run: bun run test:e2e
+
+  slash-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Fora do monorepo, com o slash-ui do GitHub Packages
+        run: bun run standalone
+
+      - name: Instalar dependências
+        env:
+          GITHUB_TOKEN: ${{ secrets.SLASH_UI_TOKEN || github.token }}
+        run: bun install
+
+      - name: Navegador do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      - name: Testes (com o exemplo do slash-ui) e tipos
+        run: bun run test && bun run typecheck
+
+      - name: Build do exemplo do slash-ui
+        run: bun run ui:build
+
+      - name: Testes de ponta a ponta
+        run: bun run test:e2e

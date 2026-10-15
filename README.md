@@ -178,6 +178,13 @@ export const site: SiteConfig = {
 
 `sitemap.xml` é sempre gerado; `robots.txt` é gerado a partir de `baseUrl`, a menos que exista `public/robots.txt`.
 
+## Testes no GitHub
+
+`.github/workflows/test.yml` roda em todo PR para `develop` ou `main` e no push na `main`, como um projeto criado do
+template (fora do monorepo): o job `framework` com `bun run standalone --without-ui`, e o job `slash-ui` com o exemplo
+do kit (o token precisa ler o pacote privado `@bashell-rrocha/slash-ui`: dê acesso a este repositório em *Package
+settings → Manage Actions access*, ou crie o segredo `SLASH_UI_TOKEN`). Merge só com os dois verdes.
+
 ## Deploy
 
 - Comando de build: `bun run build`
