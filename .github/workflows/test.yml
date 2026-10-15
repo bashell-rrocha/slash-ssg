@@ -1,0 +1,39 @@
+# Testes em todo PR para develop ou main, em todo push na main (o merge do PR) e sob demanda. Roda como um projeto
+# criado do template, fora do monorepo slash-meta: o core vem do npm (ver README → "Criar um projeto derivado").
+name: test
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - name: Instalar dependências
+        run: bun install
+
+      - name: Navegador do Playwright
+        run: bunx playwright install --with-deps chromium
+
+      - name: Testes
+        run: bun run test
+
+      - name: Tipos
+        run: bun run typecheck
+
+      - name: Testes de ponta a ponta
+        run: bun run test:e2e

@@ -10,12 +10,9 @@
     "gate": "bun run scripts/content-gate.ts",
     "preview": "bun run scripts/preview.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test src/ scripts/ examples/",
+    "test": "bun test src/ scripts/",
     "test:e2e": "playwright test",
-    "test:all": "bun run test && bun run test:e2e",
-    "ui:build": "bun run examples/slash-ui/build.ts",
-    "ui:serve": "bun run examples/slash-ui/serve.ts",
-    "standalone": "bun run scripts/standalone.ts"
+    "test:all": "bun run test && bun run test:e2e"
   },
   "dependencies": {
     "@biomejs/biome": "^2.3.11",
@@ -27,7 +24,6 @@
     "@playwright/test": "^1.57.0",
     "@types/bun": "latest",
     "playwright": "^1.57.0",
-    "typescript": "^5.6.2",
-    "@_bashell/slash-ui": "workspace:*"
+    "typescript": "^5.6.2"
   }
 }
