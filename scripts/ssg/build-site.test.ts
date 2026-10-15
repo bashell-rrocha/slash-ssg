@@ -9,12 +9,17 @@ import { buildSite, removeStaleDirs } from "./build-site";
 const root = resolve(import.meta.dir, "../..");
 const cacheRoot = join(root, ".slash-cache");
 
-// Cópia temporária do template dentro de .slash-cache/ (node_modules é resolvido subindo até a raiz real)
+// O site do teste é a fixture (__fixtures__/site/src, a demo de quando o teste foi escrito) sobre o framework do
+// template (src/lib, public, plugins): mudar ou tirar a demo de src/ não quebra o teste do framework.
+const fixtureSrc = join(import.meta.dir, "__fixtures__/site/src");
+
+// Cópia temporária dentro de .slash-cache/ (node_modules é resolvido subindo até a raiz real)
 async function copyTemplate(name: string): Promise<string> {
   const tmp = join(cacheRoot, `${name}-${process.pid}`);
   await rm(tmp, { recursive: true, force: true });
   await mkdir(tmp, { recursive: true });
-  for (const dir of ["src", "public", "plugins"]) await cp(join(root, dir), join(tmp, dir), { recursive: true });
+  for (const dir of ["public", "plugins", "src/lib"]) await cp(join(root, dir), join(tmp, dir), { recursive: true });
+  await cp(fixtureSrc, join(tmp, "src"), { recursive: true });
   return tmp;
 }
 
@@ -207,7 +212,8 @@ test("public/robots.txt existente vence o gerado e arquivo de public/ que colide
   }
 }, 60_000);
 
-const routesSource = (routes: string) => `import { unsafeHtml } from "@_bashell/slash/ssr";\nimport type { Route } from "./lib/types";\n${routes}\n`;
+const routesSource = (routes: string) =>
+  `import { unsafeHtml } from "@_bashell/slash/ssr";\nimport type { Route } from "./lib/types";\n${routes}\n`;
 
 test("erro lançado no carregamento do bundle (nível de módulo de routes.ts) vira SsgError", async () => {
   const tmp = await copyTemplate("test-carga");
@@ -231,8 +237,16 @@ export const routes: Route[] = [];\n`,
 }, 60_000);
 
 test.each([
-  ["head undefined", "head: undefined as never, page: () => unsafeHtml('<p>x</p>')", "head deve resolver para um objeto"],
-  ["head função que resolve para null", "head: () => null as never, page: () => unsafeHtml('<p>x</p>')", "(recebido: null)"],
+  [
+    "head undefined",
+    "head: undefined as never, page: () => unsafeHtml('<p>x</p>')",
+    "head deve resolver para um objeto",
+  ],
+  [
+    "head função que resolve para null",
+    "head: () => null as never, page: () => unsafeHtml('<p>x</p>')",
+    "(recebido: null)",
+  ],
   ["page que retorna número", "head: { title: 'X' }, page: () => 42 as never", "page deve retornar HTML seguro"],
   ["page que retorna string comum", "head: { title: 'X' }, page: () => '<p>x</p>' as never", "(recebido: string)"],
   ["page que retorna undefined", "head: { title: 'X' }, page: () => undefined as never", "(recebido: undefined)"],

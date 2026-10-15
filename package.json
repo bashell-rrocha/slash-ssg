@@ -14,11 +14,12 @@
     "test:e2e": "playwright test",
     "test:all": "bun run test && bun run test:e2e",
     "ui:build": "bun run examples/slash-ui/build.ts",
-    "ui:serve": "bun run examples/slash-ui/serve.ts"
+    "ui:serve": "bun run examples/slash-ui/serve.ts",
+    "standalone": "bun run scripts/standalone.ts"
   },
   "dependencies": {
     "@biomejs/biome": "^2.3.11",
-    "@_bashell/slash": "workspace:*",
+    "@_bashell/slash": "^0.0.6",
     "sharp": "^0.34.0"
   },
   "devDependencies": {

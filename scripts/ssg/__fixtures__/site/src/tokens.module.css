@@ -1,0 +1,12 @@
+/*
+ * Design tokens: a única fonte de cor do site. Cores literais (hex, rgb, hsl) só existem aqui e nos temas
+ * (src/styles/themes/*.css); o resto do projeto usa var(--…). A regra 5 de src/architecture.test.ts garante isso.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --color-border: #8884;
+  --color-accent: royalblue;
+  --color-on-accent: white;
+}
