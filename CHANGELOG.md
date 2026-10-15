@@ -2,6 +2,29 @@
 
 Todas as mudanças relevantes deste projeto são registradas aqui, seguindo [Conventional Commits](https://www.conventionalcommits.org/) e [SemVer](https://semver.org/).
 
+## [0.0.4] — 2026-10-15
+
+Compatível com `@_bashell/slash` 0.0.6 (npm). O template roda fora do monorepo `slash-meta` só com o core publicado.
+
+### Adicionado
+
+- Pipeline de testes no GitHub Actions (`.github/workflows/test.yml`): em todo PR para `develop` ou `main` e no push na
+  `main`, `bun install`, `test`, `typecheck` e `test:e2e`.
+- `Head.htmlAttrs` (atributos do `<html>`, ex.: tema e modo) e `Head.exactTitle` (título sem o sufixo do site).
+- `renderRoutes` em `src/lib/prerender-core.ts`: o prerender de um conjunto de rotas, reutilizável por outros sites.
+- O teste do framework (`scripts/ssg/build-site.test.ts`) usa uma fixture própria (`scripts/ssg/__fixtures__/site/`)
+  sobre `src/lib`: trocar ou tirar a demo de `src/` não quebra o teste. `fixture-typecheck.test.ts` passa a fixture
+  pelo `tsc`.
+
+### Alterado
+
+- `@_bashell/slash` pela versão publicada (`^0.0.6`), não mais `workspace:*`.
+- README: "Criar um projeto derivado" pelo template do GitHub (`bun install` direto) e "Testes no GitHub".
+
+### Removido
+
+- `bunfig.toml` com alias para um caminho da máquina de desenvolvimento (nada o usava).
+
 ## [0.0.3] — 2026-10-14
 
 ### Adicionado
