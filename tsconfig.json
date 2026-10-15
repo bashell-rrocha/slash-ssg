@@ -17,5 +17,5 @@
     }
   },
   "include": ["src", "plugins", "scripts", "global.d.ts", "examples"],
-  "exclude": ["public", "examples/*/dist", "examples/*/public"]
+  "exclude": ["public", "examples/*/dist", "examples/*/public", "scripts/ssg/__fixtures__/site"]
 }
