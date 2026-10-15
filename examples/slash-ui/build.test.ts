@@ -62,6 +62,7 @@ describe("ui:build (slash-ssg)", async () => {
     expect(app).toContain('data-island="pwa"');
     expect(app).toMatch(/<script type="module" src="\/client-[\w-]+\.js"><\/script>/);
     expect(landing).toContain('data-island="floating-nav"');
+    expect(app).toMatch(/<body>\s*<div id="app"><div class="[^"]*" data-shell="app">/);
     expect(landing).not.toContain("manifest");
   });
 });

@@ -33,13 +33,16 @@ const INDEX = {
 };
 
 export const routes: Route[] = [
-  { path: "/", head: head(INDEX), page: () => asHtml(siteIndex(pages)) },
+  { path: "/", head: head(INDEX), page: () => asHtml(view`<div id="app">${siteIndex(pages)}</div>`) },
   ...pages.map(
     (page): Route => ({
       path: page.path,
       head: head(page),
       page: () =>
-        asHtml(view`${renderPage(page, { host: { island } })}${page.app ? island("pwa", PwaRegister, {}) : ""}`),
+        // <div id="app">: a mesma raiz do spa e do ssr (a comparação entre os hospedeiros olha dentro dela)
+        asHtml(
+          view`<div id="app">${renderPage(page, { host: { island } })}</div>${page.app ? island("pwa", PwaRegister, {}) : ""}`,
+        ),
     }),
   ),
   {
