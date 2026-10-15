@@ -176,8 +176,23 @@ export const site: SiteConfig = {
 ## Testes no GitHub
 
 `.github/workflows/test.yml` roda em todo PR para `develop` ou `main`, no push na `main` e sob demanda
-(*workflow_dispatch*), como um projeto criado do template (fora do monorepo): um job com `bun install`,
-`bun run test`, `bun run typecheck` e `bun run test:e2e`. Merge só com ele verde.
+(*workflow_dispatch*), como um projeto criado do template (fora do monorepo): um job com
+`bun install --frozen-lockfile`, `bun run test`, `bun run typecheck` e `bun run test:e2e`. Se falhar, o relatório do
+Playwright fica nos artefatos da execução por 7 dias. Merge só com ele verde.
+
+### `bun.lock`
+
+O `bun.lock` versionado é o do template fora do monorepo (é ele que o CI e os projetos derivados usam). Dentro do
+`slash-meta` o bun usa o lock da raiz e ignora este, então ele **não** se atualiza sozinho: mudou dependência no
+`package.json`, gere o lock numa cópia limpa fora do monorepo e traga de volta (sem isso o CI falha no
+`--frozen-lockfile`):
+
+```sh
+tmp=$(mktemp -d) && git archive HEAD | tar -x -C "$tmp"   # ou copie os arquivos versionados com a mudança
+cp package.json "$tmp/" && (cd "$tmp" && rm -f bun.lock && bun install) && cp "$tmp/bun.lock" . && rm -rf "$tmp"
+```
+
+Num projeto criado do template (fora do monorepo), basta `bun install` (ou `bun update`) como sempre.
 
 ## Deploy
 
