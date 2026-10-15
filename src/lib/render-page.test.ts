@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { SsgError } from "./errors";
-import { assertShell, renderDocument } from "./render-page";
+import { applyHtmlAttrs, assertShell, renderDocument } from "./render-page";
 
 const shell = "<html><head><!--slash:head--></head><body><!--slash:app--></body></html>";
 const script = '<script type="module" src="/c.js"></script>';
@@ -65,6 +65,43 @@ describe("render-page", () => {
     expect(doc(`<html lang="pt-BR" class="a">${shell.slice(6)}`, "en")).toContain('<html lang="en" class="a">');
     expect(doc(`<html class="a">${shell.slice(6)}`, "es")).toContain('<html lang="es" class="a">');
     expect(doc(shell, 'x"y')).toContain('<html lang="x&quot;y">');
+  });
+
+  test("applyHtmlAttrs acrescenta data-theme e data-mode e mantém lang e class", () => {
+    // Arrange
+    const html = '<html lang="pt-BR" class="a">';
+
+    // Act
+    const out = applyHtmlAttrs(html, { "data-theme": "brisa", "data-mode": "light" });
+
+    // Assert
+    expect(out).toBe('<html lang="pt-BR" class="a" data-theme="brisa" data-mode="light">');
+  });
+
+  test("applyHtmlAttrs substitui o atributo que a casca já tem, no lugar, e escapa o valor", () => {
+    // Arrange
+    const html = '<html data-theme="velho" lang="pt-BR">';
+
+    // Act
+    const out = applyHtmlAttrs(html, { "data-theme": 'x"y' });
+
+    // Assert
+    expect(out).toBe('<html data-theme="x&quot;y" lang="pt-BR">');
+  });
+
+  test("renderDocument aplica htmlAttrs depois do lang", () => {
+    // Arrange / Act
+    const out = renderDocument({
+      shell,
+      head: "",
+      body: "",
+      scriptSrc: null,
+      lang: "pt-BR",
+      htmlAttrs: { "data-theme": "brisa", "data-mode": "light" },
+    });
+
+    // Assert
+    expect(out).toStartWith('<html lang="pt-BR" data-theme="brisa" data-mode="light">');
   });
 
   test("shell sem marcador lança SsgError citando o marcador", () => {

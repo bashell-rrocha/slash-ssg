@@ -11,6 +11,7 @@ export interface Head {
   noindex?: boolean; // default: false; true também remove do sitemap
   jsonLd?: object | object[];
   extra?: SafeHtml; // HTML adicional no <head>; precisa de unsafeHtml(...) (texto comum é escapado)
+  htmlAttrs?: Record<string, string>; // atributos do <html> (ex.: data-theme e data-mode do tema); lang vem do site
 }
 
 export interface Route<P extends Params = Params> {
