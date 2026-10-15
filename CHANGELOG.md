@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes deste projeto são registradas aqui, seguindo [Conventional Commits](https://www.conventionalcommits.org/) e [SemVer](https://semver.org/).
 
+## [0.0.6] — 2026-10-15
+
+### Adicionado
+
+- Verificação de fronteira no CI (`bun run boundary`): falha se aparecer um termo proibido, lido do segredo `BOUNDARY_TERMS`; o log mostra só o arquivo e a linha.
+
 ## [0.0.5] — 2026-10-15
 
 ### Adicionado
