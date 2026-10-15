@@ -3,7 +3,7 @@
 // read:packages) ou sai junto com o exemplo que o usa (--without-ui). O core já é a versão publicada no npm.
 
 /** O slash-ui fora do monorepo: a versão com que o exemplo (examples/slash-ui) foi testado. */
-export const SLASH_UI_PACKAGE = "npm:@bashell-rrocha/slash-ui@^0.5.0";
+export const SLASH_UI_PACKAGE = "npm:@bashell-rrocha/slash-ui@^0.5.1";
 
 const SLASH_UI = "@_bashell/slash-ui";
 const SCOPE_NAME = "@bashell-rrocha";

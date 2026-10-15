@@ -24,7 +24,7 @@ describe("standalone (com o slash-ui)", () => {
     // Assert
     expect(out.problems).toEqual([]);
     expect(out.pkg.devDependencies?.["@_bashell/slash-ui"]).toBe(SLASH_UI_PACKAGE);
-    expect(SLASH_UI_PACKAGE).toBe("npm:@bashell-rrocha/slash-ui@^0.5.0");
+    expect(SLASH_UI_PACKAGE).toBe("npm:@bashell-rrocha/slash-ui@^0.5.1");
     expect(out.bunfig).toBe(`[install.scopes]\n${SCOPE}\n`);
     expect(out.removeDirs).toEqual([]);
     expect(out.pkg.scripts).toEqual(PKG.scripts);
