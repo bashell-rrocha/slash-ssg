@@ -25,7 +25,7 @@ export interface RenderedPage {
 }
 
 // Renderiza em memória as rotas recebidas com a configuração do site. Separado da entrada (prerender.ts) para que
-// outro site no mesmo repositório (ex.: examples/slash-ui/) monte as próprias rotas com o mesmo pipeline.
+// outro site no mesmo repositório monte as próprias rotas com o mesmo pipeline.
 export async function renderRoutes(
   routes: readonly Route[],
   site: SiteConfig,

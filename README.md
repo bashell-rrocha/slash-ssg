@@ -1,9 +1,5 @@
 # slash-ssg
 
-> **Projeto criado pelo "Use this template"?** Rode `bun run standalone` (ou `bun run standalone --without-ui`)
-> **antes** do `bun install`: o `workspace:*` do `slash-ui` só instala dentro do monorepo. Ver
-> [Criar um projeto derivado](#criar-um-projeto-derivado).
-
 Template de site estático com [Slash](../slash): uma página HTML por URL, imagens otimizadas
 (AVIF/WebP/JPEG responsivos), CSS Modules e ilhas interativas hidratadas só onde necessário.
 O build gera tudo em `dist/`, pronto para qualquer hospedagem estática.
@@ -17,10 +13,9 @@ O build gera tudo em `dist/`, pronto para qualquer hospedagem estática.
 | `bun run build:prod` | Portão de conteúdo e, se ele abrir, o build (use no deploy) |
 | `bun run gate` | Portão de conteúdo: lista fictícios, placeholders e pendências (ver [Conteúdo](#conteúdo)) |
 | `bun run preview` | Serve o `dist/` já gerado |
-| `bun run test` | Testes unitários e de build (`bun test src/ scripts/ examples/`) |
+| `bun run test` | Testes unitários e de build (`bun test src/ scripts/`) |
 | `bun run test:e2e` | Testes de ponta a ponta com Playwright (faz o build e sobe o preview sozinho) |
 | `bun run test:all` | Tudo de uma vez: `bun run test` seguido de `bun run test:e2e` |
-| `bun run standalone` | Prepara um projeto criado do template para rodar fora do monorepo (ver [Criar um projeto derivado](#criar-um-projeto-derivado)) |
 
 A porta padrão é 4000; mude com `PORT=4100 bun run dev` (vale também para `preview`, `test:e2e` e `test:all`).
 `PORT` precisa ser um inteiro entre 1 e 65535; qualquer outro valor encerra o comando com uma mensagem de erro.
@@ -178,6 +173,12 @@ export const site: SiteConfig = {
 
 `sitemap.xml` é sempre gerado; `robots.txt` é gerado a partir de `baseUrl`, a menos que exista `public/robots.txt`.
 
+## Testes no GitHub
+
+`.github/workflows/test.yml` roda em todo PR para `develop` ou `main`, no push na `main` e sob demanda
+(*workflow_dispatch*), como um projeto criado do template (fora do monorepo): um job com `bun install`,
+`bun run test`, `bun run typecheck` e `bun run test:e2e`. Merge só com ele verde.
+
 ## Deploy
 
 - Comando de build: `bun run build`
@@ -187,19 +188,11 @@ export const site: SiteConfig = {
 
 ## Criar um projeto derivado
 
-O repositório é um template do GitHub ("Use this template"), e o projeto novo roda fora do monorepo `slash-meta`:
-o core vem do npm (`@_bashell/slash`), e o exemplo `examples/slash-ui` usa o kit `slash-ui`, que é privado.
+O repositório é um template do GitHub ("Use this template"), e o projeto novo roda fora do monorepo `slash-meta`
+sem preparo: o core vem do npm (`@_bashell/slash`).
 
 1. Crie o repositório pelo template (ou copie a pasta sem `.git/`, `node_modules/`, `dist/` e `.slash-cache/`).
-2. Antes do `bun install`, prepare as dependências do kit (`bun run standalone` roda sem nada instalado):
-   - com o `slash-ui` (precisa de acesso ao pacote privado `@bashell-rrocha/slash-ui` no GitHub Packages):
-     `bun run standalone && GITHUB_TOKEN=$(gh auth token) bun install`. O comando troca o `workspace:*` pelo pacote
-     e põe o escopo no `bunfig.toml` (o token vem do ambiente, nunca de arquivo);
-   - sem o `slash-ui`: `bun run standalone --without-ui && bun install`. Tira o pacote, o `examples/slash-ui` e os
-     scripts `ui:*` (lista o que apaga; recusa, sem gravar nada, se `examples/slash-ui` tiver mudanças no git). O
-     `examples/` só sai do script `test` (e do disco) se não sobrar outro exemplo.
-   - se o `bunfig.toml` já define os escopos em linha (`scopes = { ... }`), o comando não mexe nele e pede para
-     acrescentar o escopo `@bashell-rrocha` à mão; opção desconhecida encerra com o uso.
+2. Instale as dependências: `bun install`.
 3. Ajuste `src/site.ts`, `src/routes.ts` e rode `bun run dev`. A demo de `src/` pode ser trocada à vontade: o teste do
    framework usa a própria cópia (`scripts/ssg/__fixtures__/site/`).
 4. **Apague `content-release.json`** e troque os posts de exemplo por conteúdo real; no deploy use

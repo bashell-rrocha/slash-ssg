@@ -12,9 +12,7 @@
       "!playwright-report",
       "!plugins/css-types.ts",
       "!**/*.module.css.d.ts",
-      "!**/__fixtures__",
-      "!examples/*/dist",
-      "!examples/*/.slash-cache"
+      "!**/__fixtures__"
     ]
   }
 }
