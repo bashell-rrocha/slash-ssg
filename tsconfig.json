@@ -8,13 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": ["@types/bun", "bun-types"],
-    "noEmit": true,
-    "paths": {
-      "@_bashell/slash/core": ["../slash/src/core.ts"],
-      "@_bashell/slash/ssr": ["../slash/src/ssr.ts"],
-      "@_bashell/slash/router": ["../slash/src/router/index.ts"],
-      "@_bashell/slash": ["../slash/src/index.ts"]
-    }
+    "noEmit": true
   },
   "include": ["src", "plugins", "scripts", "global.d.ts"],
   "exclude": ["public", "scripts/ssg/__fixtures__/site"]
