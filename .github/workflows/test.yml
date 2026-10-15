@@ -26,6 +26,14 @@ jobs:
       - name: Instalar dependências
         run: bun install --frozen-lockfile
 
+      # Dependabot não recebe os segredos do repositório: este passo falha para ele por desenho
+      # (refaça o PR numa branch de mantenedor ou rode de novo por lá).
+      - name: Fronteira
+        run: bun run boundary
+        env:
+          BOUNDARY_TERMS: ${{ secrets.BOUNDARY_TERMS }}
+          GITHUB_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+
       - name: Navegador do Playwright
         run: bunx playwright install --with-deps chromium
 
