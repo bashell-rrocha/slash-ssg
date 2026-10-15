@@ -26,6 +26,12 @@ jobs:
       - name: Instalar dependências
         run: bun install --frozen-lockfile
 
+      - name: Fronteira
+        run: bun run boundary
+        env:
+          BOUNDARY_TERMS: ${{ secrets.BOUNDARY_TERMS }}
+          GITHUB_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+
       - name: Navegador do Playwright
         run: bunx playwright install --with-deps chromium
 

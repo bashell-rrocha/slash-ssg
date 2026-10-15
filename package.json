@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test src/ scripts/",
     "test:e2e": "playwright test",
-    "test:all": "bun run test && bun run test:e2e"
+    "test:all": "bun run test && bun run test:e2e",
+    "boundary": "bun run scripts/boundary.ts"
   },
   "dependencies": {
     "@biomejs/biome": "^2.3.11",
