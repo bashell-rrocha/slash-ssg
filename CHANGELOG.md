@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes deste projeto são registradas aqui, seguindo [Conventional Commits](https://www.conventionalcommits.org/) e [SemVer](https://semver.org/).
 
+## [0.0.7] — 2026-10-17
+
+### Corrigido
+
+- Código do template limpo no lint (biome) do projeto gerado: `lang` no `public/index.html`, sem `any`, sem atribuição em expressão e sem supressão sem uso.
+
 ## [0.0.6] — 2026-10-15
 
 ### Adicionado
