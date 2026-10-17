@@ -190,7 +190,6 @@ declare namespace JSX {
     view: SVGAttributes<SVGViewElement>;
   }
 
-  // biome-ignore lint/correctness/noUnusedVariables: o parâmetro T é usado pelas assinaturas JSX (IntrinsicElementMap)
   interface HTMLAttributes<T = HTMLElement> {
     // Standard HTML Attributes
     accesskey?: string;
