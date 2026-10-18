@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes deste projeto são registradas aqui, seguindo [Conventional Commits](https://www.conventionalcommits.org/) e [SemVer](https://semver.org/).
 
+## [0.0.8] — 2026-10-18
+
+### Corrigido
+
+- `sharp` 0.35.5 (sem as vulnerabilidades altas do 0.34) e `public/_headers` com os cabeçalhos de segurança.
+
 ## [0.0.7] — 2026-10-17
 
 ### Corrigido
