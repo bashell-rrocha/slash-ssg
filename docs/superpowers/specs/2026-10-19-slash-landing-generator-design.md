@@ -23,7 +23,7 @@ entregar a agências: bonitas (seções do canvas "page templates" sobre o grid 
 | Tema | Decisão |
 | --- | --- |
 | Operação | Usuário + Claude via skill dedicada a landing pages derivadas do slash-ssg |
-| Organização | slash (reativa), slash-ssg (template-base), slash-ui (componentes), slash-page-builder (comandos), slash-workflow (processo); **cada um com seu repositório git** |
+| Organização | slash (reativa), slash-ssg (template-base), slash-ui (componentes), slash-cli (comandos), slash-workflow (processo); **cada um com seu repositório git** |
 | Página | Código TS compondo componentes do slash-ui; conteúdo em `src/data/`; canvas de Design opcional |
 | Clientes | Um repositório por cliente; a agência recebe o repo e faz o próprio deploy |
 | Entrega | Repo no GitHub, **sem GitHub Actions**: toda verificação é local |
@@ -45,8 +45,8 @@ captura/produto/lançamento/evento, API de Conversões do Meta, painel visual, d
 ## 2. Arquitetura
 
 ```
-slash ← slash-ui ← projeto de landing (derivado do slash-ssg) ← criado/verificado por slash-page-builder
-slash-ssg: template-base, intocado; o projeto de landing é cópia dele + overlay do builder
+slash ← slash-ui ← projeto de landing (derivado do slash-ssg) ← criado/verificado por slash-cli
+slash-ssg: template-base, intocado; o projeto de landing é cópia dele + overlay do slash-cli
 slash-workflow: devDependency de todos os pacotes e projetos (processo)
 ```
 
@@ -55,14 +55,14 @@ slash-workflow: devDependency de todos os pacotes e projetos (processo)
 | `slash` | bashell-rrocha/slash (existe) | biblioteca reativa | nada acima dele |
 | `slash-ssg` | bashell-rrocha/slash-ssg (existe) | template-base de aplicações de páginas estáticas | landing pages |
 | `slash-ui` | rrbashell/slash-ui (privado, novo) | **só componentes de interface**, prontos para SEO, SMO e SMM | páginas, conteúdo, build |
-| `slash-page-builder` | rrbashell/slash-page-builder (privado, novo) | **comandos de conveniência** (CLI) que o Claude ou o usuário executam: criar, checar, aprovar, verificar, entregar | regras internas dos componentes |
+| `slash-cli` | rrbashell/slash-cli (privado, novo) | **comandos de conveniência** (CLI) que o Claude ou o usuário executam: criar, checar, aprovar, verificar, entregar | regras internas dos componentes |
 | `slash-workflow` | rrbashell/slash-workflow (privado, novo) | processo de desenvolvimento: portões, stamp, E2E por hash, merge local, orçamentos, release | produto |
 
 A raiz `slash-meta` não é repositório; cada pasta em `packages/` é um repositório git independente.
 
 ### 2.1 Distribuição
 
-- Pacotes `@rrbashell/slash-ui`, `@rrbashell/slash-page-builder` e `@rrbashell/slash-workflow` publicados no GitHub
+- Pacotes `@rrbashell/slash-ui`, `@rrbashell/slash-cli` e `@rrbashell/slash-workflow` publicados no GitHub
   Packages (`https://npm.pkg.github.com`); o escopo é o dono dos repos, como o registry exige.
 - Escopo resolvido pelo `bunfig.toml`:
   `[install.scopes] "@rrbashell" = { url = "https://npm.pkg.github.com", token = "$GITHUB_TOKEN" }`.
@@ -162,10 +162,15 @@ Sem JS quando possível: carrossel por scroll-snap, alternância de preço por C
   `expectNoHorizontalScroll`, `expectTouchTargets` (≥ 44 px), `expectNoA11yViolations` (axe). Usados pela galeria e
   pelos projetos de landing.
 
-## 4. slash-page-builder
+## 4. slash-cli
 
-CLI fino de comandos de conveniência (`bunx @rrbashell/slash-page-builder <comando>`, bin `slash-page`). Não
+CLI fino de comandos de conveniência (`bunx @rrbashell/slash-cli <comando>`, bin `slash`). Não
 contém componentes nem regras de layout: orquestra o que já existe (slash-ssg, slash-ui, Playwright, Lighthouse).
+
+- **Fronteira:** o slash-cli opera **projetos** (criar, checar, aprovar, verificar, entregar). O processo de
+  desenvolvimento dos **pacotes** (portões, stamp, merge, release) é do slash-workflow e não entra aqui.
+- **Templates como dados:** cada template é um overlay em `templates/<nome>/` (v1: `landing-sales`) sobre um
+  template-base (`slash-ssg`; depois `slash-spa`/`slash-ssr`). Template novo não exige mudar comandos.
 
 | Comando | O que faz |
 | --- | --- |
@@ -185,7 +190,7 @@ válido. Cada falha aponta a seção (`data-section` e índice) e a correção e
 
 ## 5. Projeto de landing (derivado do slash-ssg)
 
-Resultado de `slash-page create sorriso`: o slash-ssg inteiro mais o overlay `landing-sales` do builder. As páginas
+Resultado de `slash create sorriso`: o slash-ssg inteiro mais o overlay `landing-sales` do slash-cli. As páginas
 de exemplo do slash-ssg (home, sobre, posts) saem; o resto do slash-ssg fica igual.
 
 ```
@@ -222,13 +227,13 @@ como `agency`.
 
 ### 5.3 Entrega à agência
 
-`slash-page handoff` (seção 4). A agência builda sem token nem acesso à rrbashell e pode mudar tema, conteúdo e
+`slash handoff` (seção 4). A agência builda sem token nem acesso à rrbashell e pode mudar tema, conteúdo e
 seções dentro do catálogo da versão entregue. Nova seção/variante ou atualização do kit é um novo `handoff`.
 Privado aqui é o repositório-fonte; o JS entregue é legível.
 
 ## 6. `verify` e orçamento de 30 min
 
-`slash-page verify`, na ordem, parando no primeiro erro:
+`slash verify`, na ordem, parando no primeiro erro:
 
 1. `typecheck` e testes unitários do projeto.
 2. `gate` (conteúdo e SEO de dados).
@@ -263,18 +268,18 @@ Nova skill no plugin `slash-builder` (`/home/dev/Projetos/squad-builder/plugins/
 especialista em landing pages derivadas do slash-ssg. Substitui a `ui-builder` e a `landing-page-builder`, que
 dependem do legado (seção 2.2). Conhece o catálogo do slash-ui e a tabela canvas → código, as regras de UX (WhatsApp
 para contato, formulário só para lead, sem estados de demonstração, alternância de tons, grid de 12 colunas) e os
-comandos do slash-page-builder.
+comandos do slash-cli.
 
 Fluxo de página nova:
 
 1. Entrevista curta: cliente, oferta, preço, WhatsApp, checkout, pixels, material já fornecido.
-2. `slash-page create`.
+2. `slash create`.
 3. Escreve `src/theme.ts` (marca do cliente), `src/data/*` (origem marcada) e ajusta `src/pages/home.ts`; aciona o
    agente copywriter só para lacunas.
-4. Sobe `bun run dev` e dispara `slash-page verify --background`.
-5. Mostra o que o `gate` bloqueia; o usuário libera com `slash-page approve`.
+4. Sobe `bun run dev` e dispara `slash verify --background`.
+5. Mostra o que o `gate` bloqueia; o usuário libera com `slash approve`.
 6. Só declara pronto com o `verify` verde.
-7. Commit e push; na entrega, `slash-page handoff` (transferência do repo é manual).
+7. Commit e push; na entrega, `slash handoff` (transferência do repo é manual).
 
 ## 8. Testes
 
@@ -305,7 +310,7 @@ Tudo em TDD, padrão AAA, `bun test`; Playwright para E2E. Cobertura ≥ 90%, me
 | Pacote | O que testar |
 | --- | --- |
 | slash-ui | HTML de cada componente × variante (happy-dom); tipos das props (casos que não compilam, com `@ts-expect-error` justificado); tema e contraste; fragmentos schema.org; `SeoHead`/`JsonLd`; ilhas; galeria E2E nos 5 breakpoints |
-| slash-page-builder | cada comando; `create` em pasta temporária + `verify` do projeto gerado, com orçamento de tempo; `handoff` instalando e verificando sem `GITHUB_TOKEN`, editando tema e conteúdo; limpeza em erro |
+| slash-cli | cada comando; `create` em pasta temporária + `verify` do projeto gerado, com orçamento de tempo; `handoff` instalando e verificando sem `GITHUB_TOKEN`, editando tema e conteúdo; limpeza em erro |
 | slash-workflow | hash de entradas, seleção de E2E, stamp, pre-push, merge, timed, release (repos git temporários) |
 | projeto de landing | `ui-host`, origem do conteúdo, E2E da página |
 | slash (se alterado) | validado em slash-spa, slash-ssr e slash-ssg |
@@ -387,5 +392,5 @@ O usuário prefere interações curtas e quer ver o progresso quase em tempo rea
 - **Remoção do legado quebra projetos `client-*`:** inventário e confirmação item a item antes de apagar (2.2).
 - **Nome `@rrbashell/slash-ui` já usado por versões antigas:** o pacote antigo é removido do registry antes da
   primeira publicação nova, que começa em 0.1.0; se o registry não liberar o nome, a nova série começa em 1.0.0.
-- **Primeira publicação:** até lá, projetos e o builder usam `--kit link` (`bun link` local).
+- **Primeira publicação:** até lá, projetos e o slash-cli usam `--kit link` (`bun link` local).
 - **Pacote privado × agência:** resolvido pelo `handoff`, testado sem token.
