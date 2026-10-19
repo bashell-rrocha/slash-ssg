@@ -1,6 +1,6 @@
 # Construção de landing pages estáticas com slash — design
 
-Data: 2026-10-19 · Revisão 3 (simplificação: um repo, componentes copiados, sem pacote de processo) · Status: aguardando aprovação final do usuário
+Data: 2026-10-19 · Revisão 3 (simplificação: um repo, componentes copiados, sem pacote de processo) · Status: aprovada
 
 ## 1. Objetivo
 
