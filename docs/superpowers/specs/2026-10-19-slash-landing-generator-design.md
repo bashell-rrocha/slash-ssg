@@ -269,9 +269,17 @@ Ordem, parando no primeiro erro:
 | Scaffold | ≤ 1 min |
 | Spec + tema (skill) | ≤ 15 min |
 | Revisão no `dev` + `approve` | ≤ 10 min |
-| `verify` | ≤ 3 min |
+| `verify` | ≤ 3 min, em segundo plano durante a revisão |
+
+O `verify` começa em segundo plano assim que o spec fica completo e roda enquanto o usuário revisa no `dev`; só
+é refeito se algo mudar (cache por hash). Na prática a página fecha em 20–25 min. As duas ou três primeiras
+páginas podem levar 45–60 min até a skill e o kit amadurecerem.
 
 O E2E do `create-slash-landing` mede scaffold e `verify` e falha se passar do limite.
+
+Pedido fora do catálogo (bloco ou variante inexistente) **não** entra nos 30 min: a skill avisa no início,
+oferece a variante mais próxima para entregar agora e registra a evolução do kit, que segue o processo da
+seção 9.
 
 ## 7. Skill `slash-landing`
 
@@ -328,7 +336,53 @@ sem medo. Um teste lento, instável ou com mensagem que não aponta a correção
 | create-slash-landing | gera projeto em pasta temporária e roda o `verify` dele (E2E do gerador, com orçamento de tempo); limpeza em erro |
 | slash (se alterado) | validado em slash-spa, slash-ssr e slash-ssg |
 
-## 9. Riscos
+## 9. Processo de desenvolvimento (kit, CLI, slash-ssg)
+
+Dois caminhos separados:
+
+| Caminho | O que é | Processo | Tempo |
+| --- | --- | --- | --- |
+| Produzir uma página | spec + tema de um cliente, sem código novo | skill + `verify` uma vez (seções 6 e 7) | ≤ 30 min |
+| Evoluir o kit | bloco, variante, ilha, template, CLI, slash-ssg | este processo | horas a dias |
+
+A qualidade do kit (este processo) é o que garante a velocidade das páginas.
+
+### 9.1 Ciclo TDD (vermelho → verde → refatorar)
+
+1. **Vermelho:** escrever o teste (AAA) e rodá-lo para vê-lo falhar pelo motivo esperado.
+2. **Verde:** escrever o mínimo de código que o faz passar.
+3. **Refatorar:** com o teste verde, melhorar o código (nomes, duplicação, DRY/KISS/SOLID) rodando os testes a
+   cada mudança; commit; próximo teste.
+
+Durante o ciclo rodam só os unitários relacionados e o typecheck (≤ 10 s).
+
+### 9.2 Branches e portões
+
+Toda branch `feature/*` deriva de `develop`. Antes de cada portão, a branch recebe o merge (ou rebase) da
+branch de destino, e os testes rodam sobre esse resultado.
+
+| Portão | O que roda |
+| --- | --- |
+| `feature/*` → `develop` | typecheck, lint, **todos** os unitários, cobertura ≥ 90%, E2E **afetados** (9.3) |
+| `develop` → `main` | tudo acima + **todo** o E2E (5 breakpoints, visual, axe) + Lighthouse |
+
+### 9.3 E2E afetados por hash
+
+- Cada teste E2E tem um hash das entradas que ele exercita: o arquivo do teste, os módulos alcançados pelo grafo
+  de imports da página/bloco, CSS e tokens, imagens-base, config do Playwright e `bun.lock`.
+- Hash igual ao da última execução verde → o teste é pulado; diferente → roda.
+- Mudança em infraestrutura global (config, lockfile, `lib/`, tokens-base) → roda tudo.
+- Cache em `.e2e-cache.json` (fora do git), invalidado ao mudar a versão do Playwright ou do navegador.
+
+### 9.4 Só local, com trava
+
+- Nenhuma verificação roda no GitHub (sem Actions).
+- Merges em `develop` e `main` são feitos localmente (`bun run merge <destino>`), que atualiza a branch, roda o
+  portão e grava `.verify-stamp` (hash do *tree* testado, fora do git).
+- O hook de pre-push de `develop` e `main` recusa o push se o `.verify-stamp` não corresponder ao commit enviado,
+  sem precisar rodar os testes de novo.
+
+## 10. Riscos
 
 - **Lighthouse ≥ 95 com vídeo no hero:** mitigado por *facade*; se não bastar, a variante vídeo usa imagem até o clique.
 - **Tempo do `verify`:** Playwright e Lighthouse em paralelo e cache do hook; o orçamento é testado.
