@@ -31,6 +31,8 @@ TDD, AAA) e **em no máximo 30 minutos por página**, do briefing ao push.
 | SEO | Meta/OG, JSON-LD automático, sitemap, robots, semântica validada |
 | Processo | TDD em tudo; E2E em vários breakpoints ao fim de cada página |
 | Velocidade | Testes e aprovações nunca impedem a entrega em 30 min |
+| Distribuição do kit | `@rrbashell/slash-ui` em repo **privado** `rrbashell/slash-ui`, publicado no GitHub Packages |
+| Testes | Garantem design, comportamento e qualidade de código e **aceleram** a entrega; nunca são gargalo (seção 8) |
 
 ### Fora da v1
 
@@ -46,7 +48,8 @@ tipado, qualidade imprevisível).
 ```
 slash-meta/packages/
   slash/                  biblioteca reativa (inalterada, salvo necessidade)
-  slash-ui/               NOVO  @_bashell/slash-ui — blocos, tema, ilhas, spec, SEO, analytics
+  slash-ui/               NOVO  @rrbashell/slash-ui — blocos, tema, ilhas, spec, SEO, analytics
+                                (repo privado github.com/rrbashell/slash-ui, pacote no GitHub Packages)
   create-slash-landing/   NOVO  CLI de scaffold de um projeto de cliente
   slash-ssg/              ALTERADO  rota do spec, portão estendido, verify, approve
 skill slash-landing       NOVA  especialista em landing pages com slash-ssg
@@ -60,22 +63,38 @@ sorriso/
   theme.ts                tema do cliente
   content-release.json    liberações assinadas de conteúdo
   src/assets/images/      imagens do cliente
-  package.json            depende de @_bashell/slash-ui@<versão fixa>
+  package.json            depende de @rrbashell/slash-ui@<versão fixa>
   .githooks/pre-push      roda bun run verify
 ```
 
-Dependências: `create-slash-landing` → template slash-ssg; projeto de cliente → `@_bashell/slash-ui` →
+Dependências: `create-slash-landing` → template slash-ssg; projeto de cliente → `@rrbashell/slash-ui` →
 `@_bashell/slash`. O slash-ui não conhece o projeto de cliente; o slash-ssg conhece o slash-ui só pela
 função `renderLanding` e pelo tipo `LandingSpec`.
+
+### 2.1 Distribuição do slash-ui
+
+- Repositório privado `rrbashell/slash-ui`; pacote `@rrbashell/slash-ui` publicado no GitHub Packages
+  (`https://npm.pkg.github.com`), escopo igual ao dono do repo, como o registry exige.
+- Projetos (o desenvolvimento no monorepo e os de cliente) resolvem o escopo pelo `bunfig.toml`:
+  `[install.scopes] "@rrbashell" = { url = "https://npm.pkg.github.com", token = "$GITHUB_TOKEN" }`.
+  O token (`read:packages`) vem do ambiente e nunca é gravado no repo.
+- Publicação é local (`bun run release` no slash-ui: testes, build, bump, tag, `bun publish`), sem Actions,
+  coerente com a regra de verificação só local.
+- Versões seguem semver; projetos de cliente fixam a versão exata e atualizam por comando explícito.
+- **Entrega à agência (`bun run handoff`):** empacota a versão do kit em uso (`bun pm pack`) em
+  `vendor/slash-ui-<versão>.tgz`, troca a dependência no `package.json` para `file:vendor/slash-ui-<versão>.tgz`,
+  remove o escopo `@rrbashell` do `bunfig.toml`, roda `bun install` e `bun run verify` **sem `GITHUB_TOKEN` no
+  ambiente** e faz commit. A agência builda sem token nem acesso à organização; o repositório-fonte do kit
+  continua privado. Uma atualização posterior do kit para essa agência é um novo `handoff`.
 
 Regra do monorepo mantida: toda mudança em `slash` é validada em slash-spa, slash-ssr e slash-ssg.
 
 ## 3. slash-ui
 
-### 3.1 Spec (`@_bashell/slash-ui/spec`)
+### 3.1 Spec (`@rrbashell/slash-ui/spec`)
 
 ```ts
-import { defineLanding, c, img } from "@_bashell/slash-ui/spec";
+import { defineLanding, c, img } from "@rrbashell/slash-ui/spec";
 import { theme } from "./theme";
 
 export default defineLanding({
@@ -209,13 +228,15 @@ Gerado por `renderLanding` sobre o `Head` existente do slash-ssg:
   título 10–60 caracteres, descrição 50–160, `og:image` presente, JSON-LD válido.
 - `bun run approve`: lista os itens a liberar, pede confirmação e grava `content-release.json` assinado.
 - `bun run verify`: pipeline da seção 6.
+- `bun run handoff`: vendoriza o kit para a entrega (seção 2.1).
 - `robots.txt` gerado no build.
 
 ## 5. create-slash-landing (CLI)
 
 `bun create slash-landing <pasta> [--github <owner/repo>]`:
 
-1. Falha se a pasta existir ou se `bun` (e `gh`, com `--github`) faltar — antes de escrever qualquer arquivo.
+1. Falha se a pasta existir, se `bun` faltar, se `GITHUB_TOKEN` (com `read:packages`) faltar e o kit não for
+   `--kit link`, ou se `gh` faltar com `--github` — antes de escrever qualquer arquivo.
 2. Copia o template slash-ssg de landing; grava `site.spec.ts` (esqueleto de vendas com conteúdo `pending`),
    `theme.ts` (tema-base) e `content-release.json` vazio.
 3. `bun install` (cache local), `git init`, `git config core.hooksPath .githooks`, commit inicial.
@@ -267,16 +288,43 @@ Fluxo de página nova:
 4. Sobe `bun run dev` para o usuário revisar.
 5. Mostra o que o portão bloqueia; o usuário libera com `bun run approve`.
 6. Roda `bun run verify`; só declara pronto com tudo verde.
-7. Commit e push. Transferência do repo para a agência é manual.
+7. Commit e push.
+8. Na entrega: `bun run handoff` (seção 2.1); a transferência do repo para a agência é manual.
 
 ## 8. Testes
 
 Tudo em TDD, padrão AAA, `bun test`; Playwright para E2E. Cobertura ≥ 90%, meta 100%.
 
+### 8.1 Princípio: testes aceleram, nunca seguram
+
+Os testes existem para garantir design, comportamento e qualidade de código **e** para permitir mudar rápido
+sem medo. Um teste lento, instável ou com mensagem que não aponta a correção é tratado como bug.
+
+- **O peso fica no kit, não no projeto do cliente.** A matriz completa (cada bloco × variante × tom ×
+  breakpoint: HTML, axe, grid, regressão visual sobre uma página-galeria do kit) roda no slash-ui, uma vez por
+  versão, no `bun run release`. O projeto de cliente herda essas garantias e testa só o que é dele: o próprio
+  spec, o tema, o conteúdo e a página montada.
+- **Retorno em camadas, com orçamento de tempo:**
+
+  | Camada | Quando roda | O que cobre | Limite |
+  | --- | --- | --- | --- |
+  | Instantânea | no editor e no watch do `dev` | tipos do spec, portão, contraste do tema | ≤ 2 s |
+  | Rápida | `bun test` ao salvar (TDD) | unitários do que mudou | ≤ 10 s |
+  | Final | `bun run verify`, uma vez por página | build, peso, E2E 5 breakpoints, Lighthouse | ≤ 3 min |
+
+  O tempo de cada suíte é medido (mesmo mecanismo do `test-timing.ts` da raiz do slash-meta, levado ao template) e
+  uma suíte que estoura o limite falha.
+- **Erros que dizem como corrigir:** toda falha de tipo, portão, contraste, grid ou E2E aponta o bloco (índice e
+  `type`), o campo ou o token e a correção esperada, para a skill corrigir sem investigar.
+- **Correção automática quando é segura:** tom omitido é atribuído, base visual é criada na primeira execução
+  aprovada, `approve` assina em um comando. O que é ambíguo nunca é corrigido sozinho, só reportado.
+- **Sem testes frágeis:** nada de `sleep`, seletores por texto de copy ou screenshots de conteúdo variável
+  (vídeo, data); regressão visual compara com tolerância definida e máscara em mídia.
+
 | Pacote | O que testar |
 | --- | --- |
 | slash-ui | HTML de cada bloco × variante (happy-dom); tema e contraste; ilhas; tipos do spec (fixtures que **não** devem compilar); regras de tom/heading; JSON-LD; eventos |
-| slash-ssg | rota do spec, portão estendido, `approve`, `robots.txt`, `verify` |
+| slash-ssg | rota do spec, portão estendido, `approve`, `robots.txt`, `verify`, `handoff` (instala e verifica sem `GITHUB_TOKEN`) |
 | create-slash-landing | gera projeto em pasta temporária e roda o `verify` dele (E2E do gerador, com orçamento de tempo); limpeza em erro |
 | slash (se alterado) | validado em slash-spa, slash-ssr e slash-ssg |
 
@@ -284,5 +332,7 @@ Tudo em TDD, padrão AAA, `bun test`; Playwright para E2E. Cobertura ≥ 90%, me
 
 - **Lighthouse ≥ 95 com vídeo no hero:** mitigado por *facade*; se não bastar, a variante vídeo usa imagem até o clique.
 - **Tempo do `verify`:** Playwright e Lighthouse em paralelo e cache do hook; o orçamento é testado.
-- **Publicação do slash-ui:** os projetos de cliente dependem de versão publicada no npm; até a primeira
-  publicação, o CLI aceita `--kit link` para usar o pacote local do monorepo.
+- **Publicação do slash-ui:** os projetos de cliente dependem de versão publicada no GitHub Packages; até a
+  primeira publicação, o CLI aceita `--kit link` para usar o pacote local do monorepo.
+- **Pacote privado × entrega à agência:** resolvido pelo `handoff` (seção 2.1), que vendoriza o kit; testado
+  instalando e verificando sem token.
