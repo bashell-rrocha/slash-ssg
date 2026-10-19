@@ -1,205 +1,151 @@
-# Gerador de landing pages estáticas com slash-ssg — design
+# Construção de landing pages estáticas com slash — design
 
-Data: 2026-10-19 · Status: aprovado em conversa, aguardando revisão da spec escrita
+Data: 2026-10-19 · Revisão 2 (arquitetura em pacotes separados) · Status: aguardando revisão do usuário
 
 ## 1. Objetivo
 
-Produzir, com o usuário e o Claude (skill dedicada), landing pages estáticas prontas para entregar a agências:
-bonitas (blocos do canvas "page templates" sobre o grid de 12 colunas), com código bem escrito (spec tipado,
-TDD, AAA) e **em no máximo 30 minutos por página**, do briefing ao push.
+Produzir, com o usuário e o Claude (skill dedicada), landing pages estáticas derivadas do slash-ssg, prontas para
+entregar a agências: bonitas (seções do canvas "page templates" sobre o grid de 12 colunas), com código bem escrito
+(TDD, AAA, tipos) e **em no máximo 30 minutos por página**, do briefing ao push.
 
 ### Critérios de sucesso
 
 1. Uma landing de vendas nova sai do briefing ao push em ≤ 30 min.
-2. Cada página gerada passa no `bun run verify` local: Lighthouse mobile ≥ 95 (performance, acessibilidade,
-   boas práticas, SEO), WCAG AA (axe sem violações, contraste dos tokens), regressão visual e grid em 5
-   breakpoints, orçamento de peso (JS ≤ 15 KB gz, primeira carga ≤ 300 KB).
+2. Cada página passa no `verify` local: Lighthouse mobile ≥ 95 (performance, acessibilidade, boas práticas, SEO),
+   WCAG AA (axe sem violações, contraste dos tokens), regressão visual e grid em 5 breakpoints, orçamento de peso
+   (JS ≤ 15 KB gz, primeira carga ≤ 300 KB).
 3. Nenhuma página é publicada com conteúdo pendente, inventado ou escrito pelo Claude sem liberação.
-4. Cobertura de testes ≥ 90% (meta 100%) em todos os pacotes novos ou alterados.
+4. Cobertura de testes ≥ 90% (meta 100%) em todo pacote novo ou alterado.
+5. A construção é granular e observável: o usuário acompanha o progresso quase em tempo real (seção 10).
 
 ### Decisões do usuário
 
 | Tema | Decisão |
 | --- | --- |
-| Operação | Usuário + Claude via skill dedicada a landing pages com slash-ssg |
-| Fonte da verdade | `site.spec.ts` tipado no repo; canvas de Design opcional (desenho/aprovação) |
-| Organização | Um repositório por cliente; a agência recebe o repo e faz o próprio deploy |
+| Operação | Usuário + Claude via skill dedicada a landing pages derivadas do slash-ssg |
+| Organização | slash (reativa), slash-ssg (template-base), slash-ui (componentes), slash-page-builder (comandos), slash-workflow (processo); **cada um com seu repositório git** |
+| Página | Código TS compondo componentes do slash-ui; conteúdo em `src/data/`; canvas de Design opcional |
+| Clientes | Um repositório por cliente; a agência recebe o repo e faz o próprio deploy |
 | Entrega | Repo no GitHub, **sem GitHub Actions**: toda verificação é local |
 | Escopo v1 | Um template completo: **landing de vendas** |
 | Conversão | WhatsApp, link de checkout com UTM, pixels (GTM, GA4, Meta, Google Ads, TikTok) com consentimento LGPD |
-| Conteúdo | Agência fornece, Claude produz ou Claude complementa — os três modos no mesmo spec |
-| SEO | Meta/OG, JSON-LD automático, sitemap, robots, semântica validada |
-| Processo | TDD em tudo; E2E em vários breakpoints ao fim de cada página |
-| Velocidade | Testes e aprovações nunca impedem a entrega em 30 min |
-| Distribuição do kit | `@rrbashell/slash-ui` em repo **privado** `rrbashell/slash-ui`, publicado no GitHub Packages |
-| Testes | Garantem design, comportamento e qualidade de código e **aceleram** a entrega; nunca são gargalo (seção 8) |
+| Conteúdo | Agência fornece, Claude produz ou Claude complementa; origem marcada e liberada antes de publicar |
+| SEO/SMO/SMM | Já embutidos nos componentes do slash-ui |
+| Distribuição | Pacotes `@rrbashell/*` em repos privados da organização rrbashell, publicados no GitHub Packages |
+| Processo | TDD vermelho → verde → refatorar; portões feature → develop → main; tudo local |
+| Testes | Garantem design, comportamento e qualidade e **aceleram** a entrega; nunca são gargalo |
+| Ritmo | Construção granular, interações curtas, progresso visível quase em tempo real |
+| Legado | `@rrbashell/slash-ui` 0.8.x e `@rrbashell/slash-tools` 0.1.x atuais são removidos; tudo recomeça do zero |
 
 ### Fora da v1
 
-Formulário de lead (vem com o template de captura), templates captura/produto/lançamento/evento, `eject` de
-blocos, API de Conversões do Meta, painel visual, deploy automático, CI no GitHub.
+Formulário de lead e variantes que dependem dele (vêm com o template de captura), templates
+captura/produto/lançamento/evento, API de Conversões do Meta, painel visual, deploy automático, CI no GitHub.
 
 ## 2. Arquitetura
 
-Abordagem escolhida: **kit versionado + spec interpretado + CLI de scaffold**. Alternativas descartadas: blocos
-copiados para cada repo (correções não propagam, testes repetidos) e geração direta de código (sem contrato
-tipado, qualidade imprevisível).
-
 ```
-slash-meta/packages/
-  slash/                  biblioteca reativa (inalterada, salvo necessidade)
-  slash-ui/               NOVO  @rrbashell/slash-ui — blocos, tema, ilhas, spec, SEO, analytics
-                                (repo privado github.com/rrbashell/slash-ui, pacote no GitHub Packages)
-  create-slash-landing/   NOVO  CLI de scaffold de um projeto de cliente
-  slash-ssg/              ALTERADO  rota do spec, portão estendido, verify, approve
-skill slash-landing       NOVA  especialista em landing pages com slash-ssg
+slash ← slash-ui ← projeto de landing (derivado do slash-ssg) ← criado/verificado por slash-page-builder
+slash-ssg: template-base, intocado; o projeto de landing é cópia dele + overlay do builder
+slash-workflow: devDependency de todos os pacotes e projetos (processo)
 ```
 
-Projeto de cliente gerado (`bun create slash-landing sorriso`):
+| Pacote (pasta em `slash-meta/packages/`) | Repo git | Papel | Não conhece |
+| --- | --- | --- | --- |
+| `slash` | bashell-rrocha/slash (existe) | biblioteca reativa | nada acima dele |
+| `slash-ssg` | bashell-rrocha/slash-ssg (existe) | template-base de aplicações de páginas estáticas | landing pages |
+| `slash-ui` | rrbashell/slash-ui (privado, novo) | **só componentes de interface**, prontos para SEO, SMO e SMM | páginas, conteúdo, build |
+| `slash-page-builder` | rrbashell/slash-page-builder (privado, novo) | **comandos de conveniência** (CLI) que o Claude ou o usuário executam: criar, checar, aprovar, verificar, entregar | regras internas dos componentes |
+| `slash-workflow` | rrbashell/slash-workflow (privado, novo) | processo de desenvolvimento: portões, stamp, E2E por hash, merge local, orçamentos, release | produto |
 
-```
-sorriso/
-  site.spec.ts            fonte única da página
-  theme.ts                tema do cliente
-  content-release.json    liberações assinadas de conteúdo
-  src/assets/images/      imagens do cliente
-  package.json            depende de @rrbashell/slash-ui@<versão fixa>
-  .githooks/pre-push      roda bun run verify
-```
+A raiz `slash-meta` não é repositório; cada pasta em `packages/` é um repositório git independente.
 
-Dependências: `create-slash-landing` → template slash-ssg; projeto de cliente → `@rrbashell/slash-ui` →
-`@_bashell/slash`. O slash-ui não conhece o projeto de cliente; o slash-ssg conhece o slash-ui só pela
-função `renderLanding` e pelo tipo `LandingSpec`.
+### 2.1 Distribuição
 
-### 2.1 Distribuição do slash-ui
-
-- Repositório privado `rrbashell/slash-ui`; pacote `@rrbashell/slash-ui` publicado no GitHub Packages
-  (`https://npm.pkg.github.com`), escopo igual ao dono do repo, como o registry exige.
-- Projetos (o desenvolvimento no monorepo e os de cliente) resolvem o escopo pelo `bunfig.toml`:
+- Pacotes `@rrbashell/slash-ui`, `@rrbashell/slash-page-builder` e `@rrbashell/slash-workflow` publicados no GitHub
+  Packages (`https://npm.pkg.github.com`); o escopo é o dono dos repos, como o registry exige.
+- Escopo resolvido pelo `bunfig.toml`:
   `[install.scopes] "@rrbashell" = { url = "https://npm.pkg.github.com", token = "$GITHUB_TOKEN" }`.
-  O token (`read:packages`) vem do ambiente e nunca é gravado no repo.
-- Publicação é local (`bun run release` no slash-ui: testes, build, bump, tag, `bun publish`), sem Actions,
-  coerente com a regra de verificação só local.
-- Versões seguem semver; projetos de cliente fixam a versão exata e atualizam por comando explícito.
-- **Entrega à agência (`bun run handoff`):** empacota a versão do kit em uso (`bun pm pack`) em
-  `vendor/slash-ui-<versão>.tgz`, troca a dependência no `package.json` para `file:vendor/slash-ui-<versão>.tgz`,
-  remove o escopo `@rrbashell` do `bunfig.toml`, roda `bun install` e `bun run verify` **sem `GITHUB_TOKEN` no
-  ambiente** e faz commit. A agência builda sem token nem acesso à organização; o repositório-fonte do kit
-  continua privado. Uma atualização posterior do kit para essa agência é um novo `handoff`.
+  O token (`read:packages`; `write:packages` para publicar) vem do ambiente e nunca é gravado em repo.
+- Publicação local (`slash-workflow release`), sem Actions. Semver; projetos fixam versões exatas.
+- Desenvolvimento local entre pacotes por `bun link`, sem publicar a cada mudança.
 
-Regra do monorepo mantida: toda mudança em `slash` é validada em slash-spa, slash-ssr e slash-ssg.
+### 2.2 Legado
+
+Antes de começar: inventário e remoção, com confirmação do usuário, do `@rrbashell/slash-ui` (0.8.x) e
+`@rrbashell/slash-tools` (0.1.x) publicados, das cópias sem git em `/home/dev/Projetos/.worktrees/*/packages/` e
+das referências na skill `ui-builder`. Projetos `client-*` que dependem deles são listados para o usuário decidir
+(arquivar ou migrar depois); nada é apagado sem confirmação item a item.
 
 ## 3. slash-ui
 
-### 3.1 Spec (`@rrbashell/slash-ui/spec`)
+Biblioteca de componentes de interface. Cada componente é uma função pura `(props, host) => SafeHtml` com CSS
+Module próprio, sem cor literal (só tokens). Recebe props prontas (textos, `href`, imagens); não sabe de páginas,
+conteúdo nem build.
+
+### 3.1 Host
+
+O slash-ui não importa o slash-ssg. Componentes que precisam do ambiente recebem um `UiHost`:
 
 ```ts
-import { defineLanding, c, img } from "@rrbashell/slash-ui/spec";
-import { theme } from "./theme";
-
-export default defineLanding({
-  site: { name: "Clínica Sorriso", baseUrl: "https://sorriso.com.br", lang: "pt-BR" },
-  theme,
-  conversion: {
-    whatsapp: { number: "5511999999999", message: "Olá! Vim pelo site." },
-    checkout: { url: "https://pay.kiwify.com.br/abc", forwardUtm: true },
-  },
-  analytics: { consent: true, gtm: "GTM-XXXX", metaPixel: "123456789" },
-  seo: {
-    title: c.claude("Implante dentário em 1 dia | Clínica Sorriso"),
-    description: c.claude("..."),
-    image: img("og.jpg"),
-    imageAlt: "Fachada da Clínica Sorriso",
-    business: { type: "Dentist", address: { /* ... */ }, phone: "+55 11 99999-9999" },
-  },
-  blocks: [
-    { type: "hero", variant: { media: "video", position: "center", ctas: 1, proof: "rating" }, tone: "dark",
-      action: "checkout", content: { title: c.agency("Implante em 1 dia"), poster: img("hero.jpg", "Paciente sorrindo após o implante") } },
-    { type: "testimonials", variant: { layout: "mosaic", items: 6, rating: true },
-      content: { items: [c.fictitious({ name: "Ana", text: "..." })] } },
-    { type: "faq", content: { items: c.pending("FAQ do cliente") } },
-    { type: "cta", tone: "dark", action: "whatsapp", content: { /* ... */ } },
-    { type: "footer" },
-  ],
-  whatsappFab: true,
-});
+interface UiHost {
+  picture(img: UiImage, opts?: { sizes?: string; priority?: boolean }): SafeHtml; // imagem otimizada do host
+  island(name: string, props: object, inner: SafeHtml): SafeHtml;                 // ilha hidratada do host
+}
 ```
 
-Regras de tipo (erro de compilação):
+O projeto derivado do slash-ssg implementa o `UiHost` com `image`/`Picture`/`island` do próprio `src/lib`. A galeria e
+os testes do slash-ui usam um host de teste (`<img>` simples, wrapper `data-island`).
 
-- `blocks` é união discriminada por `type`; `variant` só aceita as variantes do bloco; `content` exige os campos
-  que a variante usa (ex.: `media: "video"` exige `videoUrl` e `poster`).
-- `action` aceita `"whatsapp" | "checkout"` e só se o canal correspondente estiver em `conversion`.
-- Toda imagem exige `alt` (via `img(path, alt)` ou campo `*Alt`).
+### 3.2 Tema e grid
 
-Regras de build (erro com mensagem que aponta o bloco):
+- `Theme` tipado → CSS vars. Tokens do canvas: `bg`, `fg`, `muted`, `soft`, `line`, `ph`, `phl`, `card`, `bb`
+  (fundo do botão), `bf` (texto do botão), `inp`; tons `light`, `gray`, `dark`, `accent`, `photo`.
+- Tipografia (famílias, pesos, arquivos woff2 self-hosted), raio.
+- Tema-base = valores do canvas, com `inp` ajustado onde o canvas reprova 3:1 (light, gray, accent).
+- `checkThemeContrast(theme)`: texto ≥ 4,5:1 (`fg`, `muted`, `soft` sobre `bg`; `fg`, `muted` sobre `card`; `bf`
+  sobre `bb`) e não-texto ≥ 3:1 (`inp` e `bb` sobre `bg`); aponta tom e token. Também como bin `slash-ui-check-theme`.
+- Grid: container 1200 com padding 24 (1152 úteis), 12 colunas, gutter 24, span
+  `calc((100% - 264px)/12*n + 24px*(n-1))`, grades de 2/3/4/6 colunas iguais; mobile 4 colunas com margem e gutter
+  16. Larguras `contained` (1200), `wide` (1320), `full`. Teste de arquitetura proíbe larguras soltas.
 
-- `tone: "dark"` só no hero e no CTA final; `tone` omitido é atribuído alternando `light`/`gray`; dois blocos
-  vizinhos com o mesmo tom explícito é erro.
-- Exatamente um `h1` (título do hero); hierarquia de headings sem saltos.
+### 3.3 Seções (landing de vendas)
 
-### 3.2 Origem do conteúdo
+Portadas do board `LpVendas` do canvas "page templates" (https://claude.ai/artifact/24Tfd3K6uzQW3aiitqH6qp), com
+**todas as variantes do canvas**, exceto as que dependem de formulário (fora da v1). Comuns a todas: `tone`
+(light/gray/dark/accent; `photo` automático no hero com imagem de fundo), `density` (normal/compact/spacious),
+`width` (contained/wide/full). A quantidade de itens vem do conteúdo, não de variante.
 
-| Marcador | Significado | Portão |
-| --- | --- | --- |
-| `c.agency(x)` | fornecido pela agência | passa |
-| `c.claude(x)` | escrito pelo Claude | exige liberação |
-| `c.fictitious(x)` | dado inventado (exemplo, depoimento) | exige liberação; nunca entra em JSON-LD |
-| `c.pending(motivo)` | ainda falta | sempre bloqueia |
+| Código | Canvas | Variantes | Excluídas na v1 |
+| --- | --- | --- | --- |
+| `Hero` | Hero01 | media image/video/background/none · position left/center/right · ratio 6/6, 7/5, 5/7, 8/4, 4/8 · ctas 1/2 · eyebrow · proof note/rating/logos/none · height auto/fullscreen | media formulário |
+| `Features` | Feat01 | columns 2/3/4 · icon top/side/number/none · card none/outline/filled · link · align left/center · header | — |
+| `FeatureSplit` | Feat02 | position right/left · ratio 6/6, 5/7, 7/5 · media image/video · detail list/numbers/testimonial/none · cta link/button/none | — |
+| `About` | About01 | position left/right · ratio 6/6, 7/5, 5/7 · media image/video/gallery · values · milestones row/vertical/none · numbers | — |
+| `Testimonials` | Test01 | layout grid/featured/carousel/mosaic · format text/video · photo · rating · header | — |
+| `Pricing` | Price01 | period toggle/monthly/once · highlight auto/none · comparison · guarantee · header | — |
+| `Faq` | Faq01 | layout twoColumns/single/grid · ratio 4/8, 5/7, 6/6 · open one/many/all · search · contact | — |
+| `Cta` | Cta01 | layout band/card/split · ratio 7/5, 6/6, 8/4 · action buttons/whatsapp · ctas 1/2 · contrast inverted/same · align center/left | action captura |
+| `Footer` | Foot01 | layout full/simple/minimal · columns 2/3/4 · social · finalCta | newsletter |
+| `WhatsappFab` | regra de UX | botão flutuante de WhatsApp | — |
+| `ConsentBanner` | LGPD | banner de consentimento | — |
 
-Valores sem marcador são tratados como `agency`. A liberação usa o mecanismo existente de
-`content-release.json` (digest + `approvedBy`/`approvedAt`/`note`), agora calculado sobre os itens `claude` e
-`fictitious` do spec.
+Sem JS quando possível: carrossel por scroll-snap, alternância de preço por CSS, FAQ por `<details>` (abertura
+`one` com `name` compartilhado). Vídeo por *facade* (capa; player só no clique).
 
-### 3.3 Blocos
+### 3.4 SEO, SMO e SMM embutidos
 
-Portados do board `LpVendas` do canvas "page templates" (https://claude.ai/artifact/24Tfd3K6uzQW3aiitqH6qp),
-**com todas as variantes que o canvas define para cada bloco**:
-
-| Código | Canvas | Variante usada na landing de vendas |
-| --- | --- | --- |
-| `hero` | Hero01 | mídia vídeo, centro, 1 CTA, prova avaliação, escuro |
-| `features` | Feat01 | 2 colunas, 4 itens, ícone ao lado, card contorno |
-| `featureSplit` | Feat02 | mídia à direita, detalhe lista, sem CTA |
-| `about` | About01 | imagem à esquerda, com números |
-| `testimonials` | Test01 | mosaico, 6 itens, com avaliação |
-| `pricing` | Price01 | 1 plano, pagamento único, com garantia |
-| `faq` | Faq01 | coluna única, 8 itens, sem contato |
-| `cta` | Cta01 | faixa, botões, 1 CTA, escuro |
-| `footer` | Foot01 | mínimo |
-| `whatsappFab` | — (regra de UX) | botão flutuante de WhatsApp |
-
-Cada bloco é uma função pura `(props, ctx) => SafeHtml` com CSS Module próprio, sem cor literal (só tokens).
-Vídeo do hero usa *facade*: capa otimizada, player do YouTube/Vimeo carregado só no clique. A tabela de
-correspondência canvas → código fica na skill.
-
-### 3.4 Tema
-
-- `Theme` tipado em TS → CSS vars. Tokens do canvas: `bg`, `fg`, `muted`, `soft`, `line`, `card`, botão
-  (`bb`/`bf`), input; tons `light`, `gray`, `dark`, `accent`, `photo`.
-- Tipografia (famílias, escala), raio, sombra.
-- Build verifica contraste AA de todo par texto/fundo em todos os tons e falha apontando o token.
-- Fontes self-hosted (woff2 copiados no build), sem requisição ao Google Fonts.
-- Tema-base neutro no kit (IBM Plex Sans/Mono, como o canvas).
-
-### 3.5 Grid
-
-Utilitários CSS do kit: container 1200 px com padding 24 (1152 úteis), 12 colunas, gutter 24, span por
-`calc((100% - 264px)/12*n + 24px*(n-1))`, grades de cards de 2/3/4/6 colunas iguais; no mobile 4 colunas com
-margem e gutter de 16 px. Teste de arquitetura proíbe larguras soltas (`minmax(<px>)`, `flex` com base em px,
-containers fora de 1200) nos CSS dos blocos.
-
-### 3.6 Ilhas (JS do cliente)
-
-| Ilha | Função |
-| --- | --- |
-| `utm` | repassa `utm_*`, `gclid`, `fbclid` da URL aos links de checkout |
-| `consent` | banner LGPD; carrega os scripts de analytics só após aceite; lembra a escolha |
-| `track` | dispara eventos padrão nos pixels configurados |
-| `videoFacade` | troca a capa pelo player no clique |
-| `faq` | só se o acordeão precisar de JS (preferência: `<details>` nativo, sem JS) |
-
-Eventos padrão:
+- **SEO:** HTML semântico (`section`, `h1` só no `Hero`, `h2`/`h3` nas demais), `alt` obrigatório no tipo,
+  `width`/`height` em toda imagem, links com texto. Cada seção expõe seu fragmento schema.org:
+  `Faq` → `FAQPage`, `Pricing` → `Product`/`Offer`, `Testimonials` → `Review`/`AggregateRating` (só com depoimentos
+  marcados como reais pelo chamador), `Footer` → `Organization`/`LocalBusiness`.
+- **Componentes de documento:** `SeoHead` (title, description, canonical, robots, Open Graph, Twitter card, favicon,
+  theme-color) e `JsonLd` (junta e serializa os fragmentos).
+- **SMO:** `SeoHead` exige imagem de compartilhamento com alt e gera `og:*`/`twitter:*`.
+- **SMM:** `whatsappHref(number, message)`; botões de CTA com `data-track="<evento>"` e `data-track-meta`
+  (seção e variante); ilha `utm` (repassa `utm_*`, `gclid`, `fbclid` aos links de checkout); `AnalyticsScripts`
+  (GTM, GA4, Meta Pixel, Google Ads, TikTok) que só carrega após o aceite no `ConsentBanner`; ilha `track` com os
+  eventos padrão:
 
 | Ação | Meta | GA4 | Google Ads | TikTok |
 | --- | --- | --- | --- | --- |
@@ -208,96 +154,127 @@ Eventos padrão:
 | Clique WhatsApp | `Contact` | `generate_lead` | conversão (opcional) | `Contact` |
 | Clique checkout | `InitiateCheckout` | `begin_checkout` | conversão | `InitiateCheckout` |
 
-Cada evento leva `block` e `variant` do CTA clicado.
+### 3.5 Galeria e helpers de teste
 
-### 3.7 SEO
+- **Galeria** (`bun run gallery`): página local com cada componente × variante × tom, recarregando a cada mudança.
+  É onde o usuário acompanha os componentes surgindo (seção 10).
+- **`@rrbashell/slash-ui/testing`:** `BREAKPOINTS = [360, 768, 1024, 1280, 1440]`, `expectOnGrid`,
+  `expectNoHorizontalScroll`, `expectTouchTargets` (≥ 44 px), `expectNoA11yViolations` (axe). Usados pela galeria e
+  pelos projetos de landing.
 
-Gerado por `renderLanding` sobre o `Head` existente do slash-ssg:
+## 4. slash-page-builder
 
-- `title`, `description`, canonical, OG e Twitter cards, `og:image` com alt, favicon e manifest do tema.
-- JSON-LD: `Organization` ou `LocalBusiness` (de `seo.business`), `Product`/`Offer` (do bloco `pricing`),
-  `FAQPage` (do bloco `faq`), `AggregateRating` só com depoimentos `agency`.
-- `sitemap.xml` (existente) e `robots.txt` apontando para ele; `noindex` respeitado.
-- Imagens com `width`/`height` (sem CLS).
+CLI fino de comandos de conveniência (`bunx @rrbashell/slash-page-builder <comando>`, bin `slash-page`). Não
+contém componentes nem regras de layout: orquestra o que já existe (slash-ssg, slash-ui, Playwright, Lighthouse).
 
-## 4. slash-ssg (template)
+| Comando | O que faz |
+| --- | --- |
+| `create <pasta> [--template landing-sales] [--github <owner/repo>] [--kit link]` | copia o slash-ssg (versão fixada) para `<pasta>`, aplica o overlay do template (seção 5), instala dependências, `git init`, hooks, commit inicial; com `--github`, cria repo privado via `gh` (sem Actions). Falha antes de escrever qualquer arquivo se a pasta existir ou faltar `bun`, `GITHUB_TOKEN` (salvo `--kit link`) ou `gh` (com `--github`); erro no meio remove a pasta |
+| `gate` | portão de conteúdo do projeto (seção 5.2) + checagens de SEO |
+| `approve` | lista o que exige liberação, pede confirmação e grava `content-release.json` assinado (`approvedBy` do `git config user.name`) |
+| `verify [--background] [--update-baseline]` | pipeline final (seção 6) |
+| `handoff` | vendoriza dependências `@rrbashell/*` em `vendor/*.tgz`, aponta o `package.json` para elas, remove o escopo do `bunfig.toml`, gera `AGENCIA.md`, roda `install` e `verify` **sem `GITHUB_TOKEN`** e faz commit |
 
-- Rota `/` renderiza `site.spec.ts` via `renderLanding`; `/404` mantido; páginas de exemplo saem do template de
-  landing (continuam nos testes de fixture do framework).
-- Portão (`bun run gate`) passa a percorrer o spec: `pending`, `claude`/`fictitious` sem liberação,
-  título 10–60 caracteres, descrição 50–160, `og:image` presente, JSON-LD válido.
-- `bun run approve`: lista os itens a liberar, pede confirmação e grava `content-release.json` assinado.
-- `bun run verify`: pipeline da seção 6.
-- `bun run handoff`: vendoriza o kit para a entrega (seção 2.1).
-- `robots.txt` gerado no build.
+Checagens sobre o **HTML gerado** (`verify`, valem para qualquer página derivada do slash-ssg): exatamente um `h1`;
+headings sem saltos; tons de seções vizinhas diferentes (`data-tone`); `dark` só no hero e no CTA final; toda
+`<img>` com `alt`, `width` e `height`; título 10–60 e descrição 50–160 caracteres; `og:image` presente; JSON-LD
+válido. Cada falha aponta a seção (`data-section` e índice) e a correção esperada.
 
-## 5. create-slash-landing (CLI)
+`AGENCIA.md`: como mudar tema (`src/theme.ts`), conteúdo (`src/data/`) e ordem/variantes das seções
+(`src/pages/home.ts`); o que exige pedir ao fornecedor (seção ou variante nova); comandos `dev`, `verify`, `build`.
 
-`bun create slash-landing <pasta> [--github <owner/repo>]`:
+## 5. Projeto de landing (derivado do slash-ssg)
 
-1. Falha se a pasta existir, se `bun` faltar, se `GITHUB_TOKEN` (com `read:packages`) faltar e o kit não for
-   `--kit link`, ou se `gh` faltar com `--github` — antes de escrever qualquer arquivo.
-2. Copia o template slash-ssg de landing; grava `site.spec.ts` (esqueleto de vendas com conteúdo `pending`),
-   `theme.ts` (tema-base) e `content-release.json` vazio.
-3. `bun install` (cache local), `git init`, `git config core.hooksPath .githooks`, commit inicial.
-4. Com `--github`: `gh repo create <owner/repo> --private --source . --push`. Nenhum workflow de Actions é criado.
+Resultado de `slash-page create sorriso`: o slash-ssg inteiro mais o overlay `landing-sales` do builder. As páginas
+de exemplo do slash-ssg (home, sobre, posts) saem; o resto do slash-ssg fica igual.
 
-Erro em qualquer passo remove a pasta criada.
+```
+sorriso/
+  src/ui-host.ts          UiHost implementado com image/Picture/island do src/lib
+  src/theme.ts            tema do cliente (defineTheme do slash-ui)
+  src/data/content.ts     conteúdo da página, com origem marcada (5.2)
+  src/data/site.ts        WhatsApp, checkout, analytics, dados do negócio (SEO local)
+  src/pages/home.ts       compõe as seções do slash-ui na ordem do LpVendas
+  src/client.ts           registra as ilhas do slash-ui
+  tests/e2e/landing.spec.ts  E2E da página com os helpers do slash-ui/testing
+  content-release.json    liberações assinadas
+  .githooks/pre-push      verify com cache
+```
 
-## 6. Verificação local (`bun run verify`)
+### 5.1 Página
 
-Ordem, parando no primeiro erro:
+`src/pages/home.ts` é TS comum: chama `Hero(...)`, `Features(...)`, … com props tipadas, lendo de `src/data/`. Trocar
+ordem, variante ou tom é editar uma linha. Variante inexistente ou prop faltando é erro de compilação (tipos do
+slash-ui).
 
-1. `typecheck`, testes unitários e de arquitetura.
-2. Portão de conteúdo e SEO.
+### 5.2 Origem do conteúdo
+
+Estende o portão que o slash-ssg já tem (`fictitious`, `pending`, placeholder), sem mudar o slash-ssg: o overlay
+traz `src/data/origin.ts` com `agency(x)`, `claude(x)`, `fictitious(x)`, `pending(motivo)`. Valor sem marcador conta
+como `agency`.
+
+| Marcador | Portão |
+| --- | --- |
+| `agency` | passa |
+| `claude` | exige liberação em `content-release.json` |
+| `fictitious` | exige liberação; nunca alimenta `AggregateRating`/`Review` |
+| `pending` | sempre bloqueia |
+
+### 5.3 Entrega à agência
+
+`slash-page handoff` (seção 4). A agência builda sem token nem acesso à rrbashell e pode mudar tema, conteúdo e
+seções dentro do catálogo da versão entregue. Nova seção/variante ou atualização do kit é um novo `handoff`.
+Privado aqui é o repositório-fonte; o JS entregue é legível.
+
+## 6. `verify` e orçamento de 30 min
+
+`slash-page verify`, na ordem, parando no primeiro erro:
+
+1. `typecheck` e testes unitários do projeto.
+2. `gate` (conteúdo e SEO de dados).
 3. Build.
-4. Orçamento de peso: JS ≤ 15 KB gz, primeira carga ≤ 300 KB.
-5. E2E Playwright, 5 projetos em paralelo (360, 768, 1024, 1280, 1440 px):
-   bordas no grid (medidas no DOM), sem rolagem horizontal, alvos de toque ≥ 44 px, axe WCAG AA, nenhum pixel
-   antes do consentimento, evento certo por CTA, UTM no checkout, regressão visual contra a base aprovada.
-6. Lighthouse mobile ≥ 95 nas 4 categorias (execuções em paralelo).
+4. Checagens sobre o HTML gerado (seção 4).
+5. Orçamento de peso: JS ≤ 15 KB gz, primeira carga ≤ 300 KB.
+6. E2E Playwright, 5 projetos em paralelo (360, 768, 1024, 1280, 1440): grid, rolagem horizontal, toque ≥ 44 px,
+   axe WCAG AA, nenhum pixel antes do consentimento, evento certo por CTA, UTM no checkout, regressão visual.
+7. Lighthouse mobile ≥ 95 nas 4 categorias (execuções em paralelo).
 
-- Base visual: gravada na primeira execução aprovada (`bun run verify --update-baseline`).
-- Durante a edição só rodam typecheck e portão (watch do `bun run dev`); E2E e Lighthouse rodam uma vez, ao fim.
-- Hook de pre-push roda o `verify`, reaproveitando o resultado se nenhum arquivo mudou desde o último verde
-  (hash do conteúdo em `.verify-cache`, fora do git).
-
-### Orçamento de tempo (30 min)
+- `--background`: começa assim que a página fica completa e roda enquanto o usuário revisa no `dev`; refaz só o que
+  mudou (cache por hash).
+- Base visual gravada na primeira execução aprovada (`--update-baseline`).
+- Durante a edição só rodam typecheck e `gate` (watch do `dev`).
+- Pre-push reaproveita o resultado se o *tree* não mudou desde o último verde (`.verify-stamp`, do slash-workflow).
 
 | Etapa | Limite |
 | --- | --- |
-| Scaffold | ≤ 1 min |
-| Spec + tema (skill) | ≤ 15 min |
+| Scaffold (`create`) | ≤ 1 min |
+| Página + tema (skill) | ≤ 15 min |
 | Revisão no `dev` + `approve` | ≤ 10 min |
 | `verify` | ≤ 3 min, em segundo plano durante a revisão |
 
-O `verify` começa em segundo plano assim que o spec fica completo e roda enquanto o usuário revisa no `dev`; só
-é refeito se algo mudar (cache por hash). Na prática a página fecha em 20–25 min. As duas ou três primeiras
-páginas podem levar 45–60 min até a skill e o kit amadurecerem.
-
-O E2E do `create-slash-landing` mede scaffold e `verify` e falha se passar do limite.
-
-Pedido fora do catálogo (bloco ou variante inexistente) **não** entra nos 30 min: a skill avisa no início,
-oferece a variante mais próxima para entregar agora e registra a evolução do kit, que segue o processo da
-seção 9.
+Na prática a página fecha em 20–25 min; as duas ou três primeiras podem levar 45–60 min. O teste E2E do
+`create` + `verify` mede esses tempos e falha se passar do limite. Pedido fora do catálogo (seção ou variante nova)
+não entra nos 30 min: a skill avisa no início, oferece a variante mais próxima e registra a evolução do slash-ui,
+que segue o processo da seção 9.
 
 ## 7. Skill `slash-landing`
 
-Especialista em landing pages estáticas com slash-ssg. Conhece o catálogo de blocos e variantes, a tabela
-canvas → código, as regras de UX (WhatsApp para contato, formulário só para lead, sem estados de demo,
-alternância de tons, grid de 12 colunas), o spec, o portão e o `verify`.
+Nova skill no plugin `slash-builder` (`/home/dev/Projetos/squad-builder/plugins/slash-builder/skills/slash-landing/`),
+especialista em landing pages derivadas do slash-ssg. Substitui a `ui-builder` e a `landing-page-builder`, que
+dependem do legado (seção 2.2). Conhece o catálogo do slash-ui e a tabela canvas → código, as regras de UX (WhatsApp
+para contato, formulário só para lead, sem estados de demonstração, alternância de tons, grid de 12 colunas) e os
+comandos do slash-page-builder.
 
 Fluxo de página nova:
 
 1. Entrevista curta: cliente, oferta, preço, WhatsApp, checkout, pixels, material já fornecido.
-2. Roda o CLI.
-3. Escreve `theme.ts` (marca do cliente) e `site.spec.ts` (briefing e/ou board do canvas), marcando a origem de
-   cada conteúdo; aciona o agente copywriter só para lacunas.
-4. Sobe `bun run dev` para o usuário revisar.
-5. Mostra o que o portão bloqueia; o usuário libera com `bun run approve`.
-6. Roda `bun run verify`; só declara pronto com tudo verde.
-7. Commit e push.
-8. Na entrega: `bun run handoff` (seção 2.1); a transferência do repo para a agência é manual.
+2. `slash-page create`.
+3. Escreve `src/theme.ts` (marca do cliente), `src/data/*` (origem marcada) e ajusta `src/pages/home.ts`; aciona o
+   agente copywriter só para lacunas.
+4. Sobe `bun run dev` e dispara `slash-page verify --background`.
+5. Mostra o que o `gate` bloqueia; o usuário libera com `slash-page approve`.
+6. Só declara pronto com o `verify` verde.
+7. Commit e push; na entrega, `slash-page handoff` (transferência do repo é manual).
 
 ## 8. Testes
 
@@ -305,88 +282,110 @@ Tudo em TDD, padrão AAA, `bun test`; Playwright para E2E. Cobertura ≥ 90%, me
 
 ### 8.1 Princípio: testes aceleram, nunca seguram
 
-Os testes existem para garantir design, comportamento e qualidade de código **e** para permitir mudar rápido
-sem medo. Um teste lento, instável ou com mensagem que não aponta a correção é tratado como bug.
-
-- **O peso fica no kit, não no projeto do cliente.** A matriz completa (cada bloco × variante × tom ×
-  breakpoint: HTML, axe, grid, regressão visual sobre uma página-galeria do kit) roda no slash-ui, uma vez por
-  versão, no `bun run release`. O projeto de cliente herda essas garantias e testa só o que é dele: o próprio
-  spec, o tema, o conteúdo e a página montada.
-- **Retorno em camadas, com orçamento de tempo:**
+- **O peso fica no slash-ui.** A matriz completa (componente × variante × tom × breakpoint: HTML, axe, grid,
+  regressão visual sobre a galeria) roda no slash-ui. O projeto de landing herda as garantias e testa só o que é
+  dele: tema, conteúdo e a página montada.
+- **Camadas com orçamento de tempo:**
 
   | Camada | Quando roda | O que cobre | Limite |
   | --- | --- | --- | --- |
-  | Instantânea | no editor e no watch do `dev` | tipos do spec, portão, contraste do tema | ≤ 2 s |
-  | Rápida | `bun test` ao salvar (TDD) | unitários do que mudou | ≤ 10 s |
-  | Final | `bun run verify`, uma vez por página | build, peso, E2E 5 breakpoints, Lighthouse | ≤ 3 min |
+  | Instantânea | editor e watch do `dev` | tipos, `gate`, contraste do tema | ≤ 2 s |
+  | Rápida | `bun test` relacionado ao salvar (TDD) | unitários do que mudou | ≤ 10 s |
+  | Final | `verify` uma vez por página; portões dos pacotes (seção 9) | build, peso, E2E, Lighthouse | ≤ 3 min |
 
-  O tempo de cada suíte é medido (mesmo mecanismo do `test-timing.ts` da raiz do slash-meta, levado ao template) e
-  uma suíte que estoura o limite falha.
-- **Erros que dizem como corrigir:** toda falha de tipo, portão, contraste, grid ou E2E aponta o bloco (índice e
-  `type`), o campo ou o token e a correção esperada, para a skill corrigir sem investigar.
-- **Correção automática quando é segura:** tom omitido é atribuído, base visual é criada na primeira execução
-  aprovada, `approve` assina em um comando. O que é ambíguo nunca é corrigido sozinho, só reportado.
-- **Sem testes frágeis:** nada de `sleep`, seletores por texto de copy ou screenshots de conteúdo variável
-  (vídeo, data); regressão visual compara com tolerância definida e máscara em mídia.
+  O tempo é medido (`slash-workflow timed`) e uma camada que estoura o limite falha.
+- **Erros que dizem como corrigir:** toda falha aponta seção, campo ou token e a correção esperada.
+- **Correção automática só quando é segura:** base visual na primeira execução aprovada, `approve` em um comando.
+  O ambíguo só é reportado.
+- **Sem testes frágeis:** nada de `sleep`, seletores por texto de copy ou screenshots de conteúdo variável;
+  regressão visual com tolerância definida e máscara em mídia.
+
+### 8.2 Por pacote
 
 | Pacote | O que testar |
 | --- | --- |
-| slash-ui | HTML de cada bloco × variante (happy-dom); tema e contraste; ilhas; tipos do spec (fixtures que **não** devem compilar); regras de tom/heading; JSON-LD; eventos |
-| slash-ssg | rota do spec, portão estendido, `approve`, `robots.txt`, `verify`, `handoff` (instala e verifica sem `GITHUB_TOKEN`) |
-| create-slash-landing | gera projeto em pasta temporária e roda o `verify` dele (E2E do gerador, com orçamento de tempo); limpeza em erro |
+| slash-ui | HTML de cada componente × variante (happy-dom); tipos das props (casos que não compilam, com `@ts-expect-error` justificado); tema e contraste; fragmentos schema.org; `SeoHead`/`JsonLd`; ilhas; galeria E2E nos 5 breakpoints |
+| slash-page-builder | cada comando; `create` em pasta temporária + `verify` do projeto gerado, com orçamento de tempo; `handoff` instalando e verificando sem `GITHUB_TOKEN`, editando tema e conteúdo; limpeza em erro |
+| slash-workflow | hash de entradas, seleção de E2E, stamp, pre-push, merge, timed, release (repos git temporários) |
+| projeto de landing | `ui-host`, origem do conteúdo, E2E da página |
 | slash (se alterado) | validado em slash-spa, slash-ssr e slash-ssg |
 
-## 9. Processo de desenvolvimento (kit, CLI, slash-ssg)
+## 9. slash-workflow e processo de desenvolvimento
 
-Dois caminhos separados:
+Dois caminhos:
 
 | Caminho | O que é | Processo | Tempo |
 | --- | --- | --- | --- |
-| Produzir uma página | spec + tema de um cliente, sem código novo | skill + `verify` uma vez (seções 6 e 7) | ≤ 30 min |
-| Evoluir o kit | bloco, variante, ilha, template, CLI, slash-ssg | este processo | horas a dias |
+| Produzir uma página | tema + conteúdo + composição, sem componente novo | skill + `verify` (seções 6 e 7) | ≤ 30 min |
+| Evoluir os pacotes | componente, variante, comando, processo | esta seção | horas a dias |
 
-A qualidade do kit (este processo) é o que garante a velocidade das páginas.
-
-### 9.1 Ciclo TDD (vermelho → verde → refatorar)
+### 9.1 Ciclo TDD
 
 1. **Vermelho:** escrever o teste (AAA) e rodá-lo para vê-lo falhar pelo motivo esperado.
-2. **Verde:** escrever o mínimo de código que o faz passar.
-3. **Refatorar:** com o teste verde, melhorar o código (nomes, duplicação, DRY/KISS/SOLID) rodando os testes a
-   cada mudança; commit; próximo teste.
-
-Durante o ciclo rodam só os unitários relacionados e o typecheck (≤ 10 s).
+2. **Verde:** o mínimo de código que o faz passar.
+3. **Refatorar:** com o teste verde, melhorar (nomes, duplicação, DRY/KISS/SOLID) rodando os testes a cada mudança;
+   commit; próximo teste.
 
 ### 9.2 Branches e portões
 
-Toda branch `feature/*` deriva de `develop`. Antes de cada portão, a branch recebe o merge (ou rebase) da
-branch de destino, e os testes rodam sobre esse resultado.
+Toda `feature/*` deriva de `develop`. Antes de cada portão a branch recebe o merge do destino e os testes rodam
+sobre esse resultado.
 
 | Portão | O que roda |
 | --- | --- |
 | `feature/*` → `develop` | typecheck, lint, **todos** os unitários, cobertura ≥ 90%, E2E **afetados** (9.3) |
-| `develop` → `main` | tudo acima + **todo** o E2E (5 breakpoints, visual, axe) + Lighthouse |
+| `develop` → `main` | tudo acima + **todo** o E2E + Lighthouse (quando o pacote tiver página) |
 
 ### 9.3 E2E afetados por hash
 
-- Cada teste E2E tem um hash das entradas que ele exercita: o arquivo do teste, os módulos alcançados pelo grafo
-  de imports da página/bloco, CSS e tokens, imagens-base, config do Playwright e `bun.lock`.
-- Hash igual ao da última execução verde → o teste é pulado; diferente → roda.
-- Mudança em infraestrutura global (config, lockfile, `lib/`, tokens-base) → roda tudo.
-- Cache em `.e2e-cache.json` (fora do git), invalidado ao mudar a versão do Playwright ou do navegador.
+- Hash por teste E2E sobre o que ele exercita: o arquivo do teste, os módulos alcançados pelo grafo de imports
+  (declarado por teste na config), CSS e tokens, imagens-base, config do Playwright e `bun.lock`.
+- Hash igual ao da última execução verde → pula; diferente → roda. Mudança global (config, lockfile, tokens-base)
+  → roda tudo. Cache em `.e2e-cache.json` (fora do git), invalidado ao mudar Playwright ou navegador.
 
 ### 9.4 Só local, com trava
 
-- Nenhuma verificação roda no GitHub (sem Actions).
-- Merges em `develop` e `main` são feitos localmente (`bun run merge <destino>`), que atualiza a branch, roda o
-  portão e grava `.verify-stamp` (hash do *tree* testado, fora do git).
-- O hook de pre-push de `develop` e `main` recusa o push se o `.verify-stamp` não corresponder ao commit enviado,
-  sem precisar rodar os testes de novo.
+- Nenhuma verificação no GitHub. Merges em `develop` e `main` são locais (`slash-workflow merge <destino>`):
+  atualiza a branch, roda o portão, grava `.verify-stamp` (hash do *tree* testado, fora do git), faz o merge.
+- O pre-push de `develop` e `main` recusa o push sem stamp do mesmo *tree*, sem rodar os testes de novo.
 
-## 10. Riscos
+### 9.5 Comandos do slash-workflow
 
-- **Lighthouse ≥ 95 com vídeo no hero:** mitigado por *facade*; se não bastar, a variante vídeo usa imagem até o clique.
-- **Tempo do `verify`:** Playwright e Lighthouse em paralelo e cache do hook; o orçamento é testado.
-- **Publicação do slash-ui:** os projetos de cliente dependem de versão publicada no GitHub Packages; até a
-  primeira publicação, o CLI aceita `--kit link` para usar o pacote local do monorepo.
-- **Pacote privado × entrega à agência:** resolvido pelo `handoff` (seção 2.1), que vendoriza o kit; testado
-  instalando e verificando sem token.
+`gate <feature|release>`, `merge <develop|main>`, `e2e --affected`, `timed <instant|fast|final> -- <cmd>`,
+`install-hooks`, `pre-push`, `release <patch|minor|major>` (a partir da `main` com stamp de release: bump, tag,
+`bun publish` no GitHub Packages, push). Configuração por `workflow.config.ts` em cada repo.
+
+### 9.6 Retrospectiva por etapa
+
+Ao fim de cada etapa do plano, antes de abrir a próxima: retrospectiva registrada no plano com
+(1) o que funcionou, (2) o que travou e por quê, (3) pendências levantadas **e resolvidas** (ou movidas para uma
+tarefa explícita com motivo), (4) mudanças de processo aplicadas (no plano, na memória, no slash-workflow ou na
+skill), (5) métricas da etapa (tempo das camadas de teste, cobertura, duração real × estimada).
+
+## 10. Construção granular e acompanhamento
+
+O usuário prefere interações curtas e quer ver o progresso quase em tempo real. Por isso:
+
+- **Etapa → tarefa → subtarefa.** Uma etapa fecha um entregável (ex.: "tema e grid do slash-ui"). Uma tarefa é uma
+  unidade com teste e revisão próprios (ex.: "componente `Faq`"). Uma subtarefa é **um ciclo vermelho → verde →
+  refatorar** sobre um comportamento (ex.: "`Faq` layout `single`"), de poucos minutos.
+- **Cada subtarefa termina com algo observável:** um teste novo passando, um componente/variante aparecendo na
+  galeria, um comando respondendo no terminal. Nada fica "invisível" por mais de uma subtarefa.
+- **Commit por subtarefa** (pequeno, mensagem descritiva) e **status atualizado no plano na hora**: `[ ]` → `[x]` na
+  subtarefa; tarefa e etapa mudam de ⬜ pendente → 🔄 em andamento → ✅ concluída na tabela de status do topo.
+- **Uma linha ao usuário por subtarefa** concluída: o que mudou e onde ver (teste, URL da galeria, comando).
+- **Galeria ao vivo:** durante as etapas do slash-ui, `bun run gallery` fica aberto (porta 4300) e recarrega a cada
+  mudança; o usuário vê cada componente e variante surgir.
+- **Pausa para correção:** o usuário pode interromper a qualquer momento; o ajuste entra como nova subtarefa, sem
+  refazer o que já passou.
+- **Fim de etapa:** portão do slash-workflow, retrospectiva (9.6) e um resumo curto com o que dá para ver/testar.
+
+## 11. Riscos
+
+- **Lighthouse ≥ 95 com vídeo no hero:** *facade*; se não bastar, a variante vídeo usa imagem até o clique.
+- **Tempo do `verify`:** Playwright e Lighthouse em paralelo, cache por hash; orçamento testado.
+- **Remoção do legado quebra projetos `client-*`:** inventário e confirmação item a item antes de apagar (2.2).
+- **Nome `@rrbashell/slash-ui` já usado por versões antigas:** o pacote antigo é removido do registry antes da
+  primeira publicação nova, que começa em 0.1.0; se o registry não liberar o nome, a nova série começa em 1.0.0.
+- **Primeira publicação:** até lá, projetos e o builder usam `--kit link` (`bun link` local).
+- **Pacote privado × agência:** resolvido pelo `handoff`, testado sem token.
