@@ -197,3 +197,22 @@ Todas com `/404`, WhatsappFab, ConsentBanner, GTM e marcadores `utm`/`track`.
   requisito de CORS do destino.
 - **Tempo do `verify` com muitas rotas:** HTML e peso são baratos; Lighthouse por amostra de padrões.
 - **Herança entre templates acoplar demais:** `inherits` é de um nível só; teste impede ciclo.
+
+## 10. Emendas da fase 1 (2026-10-20, v0.8.0)
+
+Decisões tomadas durante a execução que mudam o texto acima; valem sobre ele.
+
+- **§3.1, dados do lead:** o modelo nasce com `site.lead.endpoint: fictitious("https://hooks.exemplo.com.br/lead")`,
+  não `pending(...)`. Com `pending` o `LeadForm` não renderiza e `approve`/`verify` travam, o que contradiz a §1
+  ("cada modelo sai do create com verify verde"); o `approve` lista o endpoint fictício para a agência trocar.
+  `pending` continua possível para quem quiser bloquear o `check`. O telefone exige pelo menos 10 dígitos; a isca
+  `company` tem rótulo neutro.
+- **§4, formulário só na captura:** o formulário de lead aparece só no modelo `captura`. Nos demais o contato é o
+  botão do WhatsApp; o `lancamento` usa `Cta card` com ação `cta` (WhatsApp) no lugar de `Cta card lead`. O `LeadForm`
+  e o `Cta card lead` continuam em `ui/`.
+- **§4, captura:** sem campo de e-mail e sem o botão flutuante do WhatsApp, para o formulário inteiro caber acima da
+  dobra em 360×800 sem nada por cima.
+- **§3, Header e Hero no celular e no desktop:** abaixo de 768 px o CTA do Header fica oculto (com JS; sem JS ele
+  aparece, porque o menu depende da ilha); com `secondaryCta` os dois botões do Hero ficam lado a lado, quebrando só
+  quando não cabem; avaliação e CTAs seguem o alinhamento do texto da variante; no `split-form` o texto alinha ao
+  topo do card do formulário.
