@@ -216,3 +216,12 @@ Decisões tomadas durante a execução que mudam o texto acima; valem sobre ele.
   aparece, porque o menu depende da ilha); com `secondaryCta` os dois botões do Hero ficam lado a lado, quebrando só
   quando não cabem; avaliação e CTAs seguem o alinhamento do texto da variante; no `split-form` o texto alinha ao
   topo do card do formulário.
+
+### 10.1 Emendas antes da fase 2 (2026-10-20)
+
+- **§4 e §5.4, Faq:** modelos e sites usam o Faq com título acima das perguntas (`single`); o `two-columns` fica só
+  como variante disponível.
+- **§5.1, código de site:** `src/site/` é compartilhado e genérico (não lê `src/data`); o layout que lê os dados do
+  site mora em `src/pages/layout.ts`.
+- **§6, verify em todas as rotas:** as páginas são os `dist/**/*.html` (o slash-ssg grava `/a` em `a.html`), sem
+  `404.html`; canonical = `baseUrl` sem `/` final + rota.
