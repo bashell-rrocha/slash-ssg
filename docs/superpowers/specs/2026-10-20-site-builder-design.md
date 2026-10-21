@@ -225,3 +225,21 @@ Decisões tomadas durante a execução que mudam o texto acima; valem sobre ele.
   site mora em `src/pages/layout.ts`.
 - **§6, verify em todas as rotas:** as páginas são os `dist/**/*.html` (o slash-ssg grava `/a` em `a.html`), sem
   `404.html`; canonical = `baseUrl` sem `/` final + rota.
+
+### 10.2 Emendas da fase 2 (2026-10-20, v0.9.0)
+
+- **§6 e §10.1, rotas servidas:** o slash-ssg normaliza a rota para barra final (`buildUrl`: `/sobre` →
+  `sobre/index.html`; só `/` e `/404` sem barra). Canonical, `og:url`, sitemap, menu, migalhas e `collection.href`
+  usam `/sobre/`; `checkCanonical` aceita só essa forma. Uma página que existe só como `a.html` é a rota `/a`. Um
+  `.html` que é cópia byte a byte de `public/` não é página.
+- **§6, Lighthouse:** `/` + a primeira rota de cada padrão: fixa, índice de coleção (rota de um segmento pai de
+  outras), item e categoria (com `ItemList`); a página de item não emite `ItemList`. Custo fixo (≤ 5 rotas).
+- **§6 e §9, E2E do projeto:** percorre todas as rotas nos 5 breakpoints, então o tempo cresce ~2,7 s por página
+  (catálogo de exemplo: 14 páginas, `verify` ≈ 132 s). Na v0.9.0 o limite fica documentado no `AGENCIA.md` e na
+  skill (~25 itens de catálogo cabem em 3 min); amostrar grade/axe/base visual por tipo de página, mantendo as
+  checagens de DOM em todas as rotas, fica para depois.
+- **§5.4, catálogo:** `/` · `/catalogo/` · `/catalogo/<categoria>/` (só com ≥ `categoryMin` itens) ·
+  `/catalogo/<slug>/` · `/sobre/` · `/contato/`; o modelo tira do clássico serviços e equipe por
+  `models.overrides.catalogo.remove`. A 404 usa o layout do site (menu, rodapé, WhatsApp, GTM) e é `noindex`.
+- **§5.4, one-page:** Faq `single` (§10.1); o rodapé dos multi-page tem colunas como dados (`data/footer.ts`).
+- **§2, templates:** `landing-sales` deixa de existir (template desconhecido) na v0.9.0.
